@@ -297,7 +297,12 @@
                  style="flex:1;max-width:360px" oninput="mapSlide(this.value)">
           <b id="mapperiodlab" style="color:var(--navy);min-width:90px;margin-left:12px;"></b>
         </div>
-        <div id="map" style="margin-top:12px;"></div>
+        <div class="map-wrapper" style="position: relative; margin-top:12px;">
+          <div id="map"></div>
+          <button id="map-fs-btn" type="button" onclick="toggleMapFullscreen()" style="position: absolute; top: 10px; right: 10px; z-index: 1000; background: var(--white); color: var(--navy); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font-size: 12px; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); font-weight: 700;">
+            <span id="fs-icon">⛶</span> <span id="fs-text">Fullscreen</span>
+          </button>
+        </div>
         <div class="mini" id="mapnote" style="margin-top:6px"></div>
       </div>
 
