@@ -292,7 +292,7 @@
           <span><span class="sw" style="background:#0d366b;height:10px;width:10px;border-radius:50%"></span>Indonesian port</span>
         </div>
         <div class="legend" id="mapperiodrow" style="display:none; margin-top:10px; align-items:center;">
-          <span>Period:</span>
+          <span>Year:</span>
           <input type="range" id="mapslider" min="0" max="0" value="0" step="1"
                  style="flex:1;max-width:360px" oninput="mapSlide(this.value)">
           <b id="mapperiodlab" style="color:var(--navy);min-width:90px;margin-left:12px;"></b>
@@ -800,20 +800,19 @@
 
     // ------------------------------------------------------------------- map
     let map = null, flowLayer = null;
-    let mapPeriods = [], mapIdx = 0;
-    const perKey = r => r.month_id ? `${r.year}-${r.month_id}` : String(r.year);
+    let mapYears = [], mapYearIdx = 0;
 
     function rebuildSlider(f){
-      const ps = [...new Set(f.map(perKey))].sort();
-      if (ps.join('|') !== mapPeriods.join('|')) { mapPeriods = ps; mapIdx = 0; }
-      el('mapperiodrow').style.display = ps.length > 1 ? 'flex' : 'none';
+      const years = [...new Set(f.map(r => String(r.year)))].sort();
+      if (years.join('|') !== mapYears.join('|')) { mapYears = years; mapYearIdx = 0; }
+      el('mapperiodrow').style.display = years.length > 1 ? 'flex' : 'none';
       const s = el('mapslider');
-      s.max = ps.length; s.value = mapIdx;
-      el('mapperiodlab').textContent = mapIdx ? mapPeriods[mapIdx-1] : 'All periods';
+      s.max = years.length; s.value = mapYearIdx;
+      el('mapperiodlab').textContent = mapYearIdx ? mapYears[mapYearIdx-1] : 'All years';
     }
     function mapSlide(v){
-      mapIdx = +v;
-      el('mapperiodlab').textContent = mapIdx ? mapPeriods[mapIdx-1] : 'All periods';
+      mapYearIdx = +v;
+      el('mapperiodlab').textContent = mapYearIdx ? mapYears[mapYearIdx-1] : 'All years';
       updateMap(filtered());
     }
 
@@ -843,7 +842,7 @@
     async function updateMap(f){
       if (!(await ensureMap())) return;
       flowLayer.clearLayers();
-      if (mapIdx) f = f.filter(r => perKey(r) === mapPeriods[mapIdx-1]);
+      if (mapYearIdx) f = f.filter(r => String(r.year) === mapYears[mapYearIdx-1]);
       const col = f[0] && f[0].flow === 'import' ? ORANGE : BLUE;
       const flows = new Map();
       for (const r of f) {
@@ -884,7 +883,7 @@
           .bindTooltip(`${esc_(c)}<br>US$ ${Math.round(v).toLocaleString()}`).addTo(flowLayer);
       }
       el('mapnote').textContent =
-        `${mapIdx ? mapPeriods[mapIdx-1] : 'all periods'}: ` +
+        `${mapYearIdx ? mapYears[mapYearIdx-1] : 'all years'}: ` +
         `${shown.length}${items.length > shown.length ? ' of ' + items.length.toLocaleString() : ''} flows shown (largest first); ` +
         `line width and marker size scale with value` +
         (miss.size ? ` - no coordinates for: ${[...miss].slice(0, 6).join(', ')}${miss.size > 6 ? ' …' : ''}` : '');
