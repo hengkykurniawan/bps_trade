@@ -4,126 +4,112 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>BPS Foreign Trade Downloader</title>
-<style>
-:root{--blue:#0b5ed7;--bg:#f5f7fa;--line:#dde3ea;--muted:#5a6b7d;--red:#a33}*{box-sizing:border-box}body{margin:0;font:14px/1.45 system-ui,-apple-system,Segoe UI,Arial,sans-serif;background:var(--bg);color:#1c2733}header{background:var(--blue);color:#fff;padding:12px 20px;font-size:17px;font-weight:700}header small{font-weight:400;opacity:.85;margin-left:10px}main{max-width:1250px;margin:16px auto;padding:0 16px}.card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin-bottom:14px}.row{display:flex;flex-wrap:wrap;gap:22px}.col{min-width:180px}h3{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}label.opt{display:block;padding:1px 0;cursor:pointer;white-space:nowrap}.scroll{max-height:230px;overflow:auto;border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:#fcfdfe}.chapters{columns:2;min-width:430px}.chapters label.opt{break-inside:avoid;font-size:12.5px}input[type=text],input[type=password],textarea,select{border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit}textarea{width:100%;height:64px;resize:vertical}.mini{font-size:12px;color:var(--muted)}button{border:0;border-radius:6px;padding:8px 18px;font:inherit;cursor:pointer}.primary{background:var(--blue);color:#fff;font-weight:700}.primary:disabled{background:#9db8dd;cursor:default}.ghost{background:#e8eef6;color:var(--blue)}.linkbtn{background:none;color:var(--blue);padding:2px 4px;text-decoration:underline}#bar{height:8px;background:#e4e9f0;border-radius:4px;overflow:hidden;margin-top:8px;display:none}#bar div{height:100%;width:0%;background:var(--blue);transition:width .2s}#stats{display:flex;gap:26px;flex-wrap:wrap;margin:4px 0 10px}#stats b{font-size:17px}.statlab{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}table{border-collapse:collapse;width:100%;font-size:12.5px}th,td{border-bottom:1px solid var(--line);padding:4px 8px;text-align:left}th{background:#f0f4f9;position:sticky;top:0}td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}#tablewrap{max-height:480px;overflow:auto;border:1px solid var(--line);border-radius:6px}#log{color:var(--red);font-size:12.5px;white-space:pre-wrap}.filters{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px}.filters .f{display:flex;flex-direction:column;gap:3px}.filters select{min-width:210px}.vizgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(390px,1fr));gap:20px}.viz h4{margin:0 0 6px;font-size:13px;font-weight:700;color:#52514e}.barrow{display:grid;grid-template-columns:minmax(110px,170px) 1fr 70px;gap:8px;align-items:center;margin:5px 0}.barname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bartrack{height:16px;background:#eef2f7;border-radius:8px;overflow:hidden}.bar{height:100%;background:var(--blue);border-radius:8px}.barval{text-align:right;font-variant-numeric:tabular-nums;color:#52514e}.warn{background:#fff8e1;border:1px solid #ffe08a;color:#654b00;border-radius:6px;padding:8px;margin:8px 0}.hidden{display:none!important}@media(max-width:760px){.chapters{columns:1;min-width:0}.row{gap:14px}.filters select{min-width:160px}}
-</style>
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<header>BPS Foreign Trade Downloader <small>GitHub Pages static version · webapi.bps.go.id/dataexim</small></header>
+<header>
+  <div>BPS Foreign Trade Downloader <small>GitHub Pages static app · webapi.bps.go.id/dataexim</small></div>
+</header>
 <main>
-<div class="card warn"><b>Static GitHub Pages note.</b> This page cannot run the Python backend from <code>bps_exim_app.py</code>. Enter your BPS API key below; it is used in your browser only and is not committed to GitHub. If the direct BPS request is blocked by browser CORS, the page tries a public CORS relay as a fallback.</div>
-<div class="card">
-  <div class="row">
-    <div class="col" style="min-width:260px;flex:1">
-      <h3>BPS API key</h3>
-      <input type="password" id="apikey" placeholder="paste BPS API key" style="width:100%;max-width:420px">
-      <button class="ghost" onclick="saveKey()">Save in this browser</button>
-      <button class="linkbtn" onclick="clearKey()">clear</button>
-      <div class="mini">GitHub Pages is static, so the key cannot be hidden server-side as in the local Python app.</div>
-    </div>
-  </div>
-</div>
-<div class="card">
-  <div class="row">
-    <div class="col">
-      <h3>Flow</h3>
-      <label class="opt"><input type="radio" name="flow" value="export" checked> Ekspor (export)</label>
-      <label class="opt"><input type="radio" name="flow" value="import"> Impor (import)</label>
-    </div>
-    <div class="col">
-      <h3>Year <button class="linkbtn" onclick="setAll('years',true)">all</button><button class="linkbtn" onclick="setAll('years',false)">none</button></h3>
-      <div class="scroll" id="years"></div>
-    </div>
-    <div class="col">
-      <h3>Month <button class="linkbtn" onclick="setAll('monthsbox',true)">all</button><button class="linkbtn" onclick="setAll('monthsbox',false)">none</button></h3>
-      <div class="scroll" id="monthsbox"></div>
-      <div class="mini" style="max-width:190px">Check months for monthly data; leave all unchecked for annual totals.</div>
-      <h3 style="margin-top:14px">Port (pelabuhan)</h3>
-      <label class="opt"><input type="checkbox" id="incport" checked> Include port information</label>
-      <select id="portsel" style="max-width:220px;margin-top:4px"><option value="">(all ports)</option></select>
-      <h3 style="margin-top:14px">Country (negara)</h3>
-      <label class="opt"><input type="checkbox" id="incctr" checked> Include country information</label>
-      <select id="ctrsel" style="max-width:220px;margin-top:4px"><option value="">(all countries)</option></select>
-      <div class="mini" style="max-width:210px">Untick country for world totals; untick port to aggregate ports.</div>
-    </div>
-    <div class="col" style="flex:1">
-      <h3>HS chapters (2-digit) <button class="linkbtn" onclick="setAll('chapters',true)">all</button><button class="linkbtn" onclick="setAll('chapters',false)">none</button><input type="text" id="hsfilter" placeholder="search..." style="margin-left:8px;padding:2px 6px;font-size:12px" oninput="filterChapters()"></h3>
-      <div class="scroll chapters" id="chapters"></div>
-      <div id="levelbox" style="margin-top:8px">
-        <label class="opt" style="display:inline-block;margin-right:16px"><input type="radio" name="hslevel" value="2" checked> 2-digit chapter totals</label>
-        <label class="opt" style="display:inline-block"><input type="radio" name="hslevel" value="8"> 8/10-digit all full HS codes in selected chapters</label>
+  <section class="card warn">
+    <b>Important:</b> GitHub Pages is static. It cannot run the Python backend in <code>bps_exim_app.py</code>, so this version calls BPS from your browser. Enter your BPS API key below. If BPS blocks browser requests, choose one of the proxy modes.
+  </section>
+
+  <section class="card">
+    <div class="row">
+      <div class="col grow">
+        <h3>BPS API key</h3>
+        <input type="password" id="apikey" placeholder="paste your BPS API key" autocomplete="off">
+        <button class="ghost" id="savekey">Save in this browser</button>
+        <button class="linkbtn" id="clearkey">clear</button>
+        <div class="mini">The key stays in your browser localStorage. It is not written into the repository.</div>
       </div>
-      <h3 style="margin-top:12px">Extra full HS codes</h3>
-      <textarea id="fullhs" placeholder="e.g. 15111000 27011290 (space, comma or newline separated)"></textarea>
-      <div class="mini">For 2014–2016, BPS master can use 10-digit HS; for 2017+ use 8-digit codes.</div>
+      <div class="col grow">
+        <h3>Request mode</h3>
+        <select id="requestmode">
+          <option value="auto">Auto: direct, then proxies</option>
+          <option value="direct">Direct to BPS only</option>
+          <option value="allorigins">Proxy: AllOrigins</option>
+          <option value="corsproxyio">Proxy: corsproxy.io</option>
+          <option value="codetabs">Proxy: CodeTabs</option>
+        </select>
+        <div class="mini">Use a proxy only when direct browser fetch is blocked by CORS.</div>
+      </div>
     </div>
-  </div>
-  <div style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-    <button class="primary" id="go" onclick="fetchAll()">Fetch data</button>
-    <button class="ghost" id="cancel" onclick="cancelled=true" style="display:none">Cancel</button>
-    <span class="mini" id="progtext"></span>
-  </div>
-  <div id="bar"><div></div></div>
-  <div id="log"></div>
-</div>
-<div class="card" id="results" style="display:none">
-  <div class="filters">
-    <div class="f"><span class="statlab">Pelabuhan</span><select id="fport" onchange="render()"></select></div>
-    <div class="f"><span class="statlab">Negara</span><select id="fctr" onchange="render()"></select></div>
-    <div class="f"><span class="statlab">HS code</span><select id="fhs" onchange="render()"></select></div>
-    <div class="f"><span class="statlab">Search</span><input type="text" id="fsearch" placeholder="any text..." oninput="render()"></div>
-    <button class="primary" onclick="downloadCSV()">Download CSV</button>
-  </div>
-  <div id="stats"></div>
-  <div id="tablewrap"><table id="tbl"></table></div>
-  <div class="mini" id="tablenote" style="margin-top:6px"></div>
-</div>
-<div class="card viz" id="vizcard" style="display:none">
-  <div class="vizgrid">
-    <div><h4 id="t_time"></h4><div id="c_time"></div></div>
-    <div id="c_ctr_wrap"><h4>Top countries by value (US$)</h4><div id="c_ctr"></div></div>
-    <div><h4>Top HS codes by value (US$)</h4><div id="c_hs"></div></div>
-    <div id="c_port_wrap"><h4>Top ports by value (US$)</h4><div id="c_port"></div></div>
-  </div>
-  <div class="mini">Charts follow the filters above.</div>
-</div>
+  </section>
+
+  <section class="card">
+    <div class="row">
+      <div class="col">
+        <h3>Flow</h3>
+        <label class="opt"><input type="radio" name="flow" value="export" checked> Ekspor (export)</label>
+        <label class="opt"><input type="radio" name="flow" value="import"> Impor (import)</label>
+      </div>
+
+      <div class="col">
+        <h3>Year <button class="linkbtn" data-setall="years:1">all</button><button class="linkbtn" data-setall="years:0">none</button></h3>
+        <div class="scroll" id="years"></div>
+      </div>
+
+      <div class="col">
+        <h3>Month <button class="linkbtn" data-setall="monthsbox:1">all</button><button class="linkbtn" data-setall="monthsbox:0">none</button></h3>
+        <div class="scroll" id="monthsbox"></div>
+        <div class="mini narrow">Tick months for monthly data. Leave all months unticked for annual totals.</div>
+
+        <h3 class="mt">Port</h3>
+        <label class="opt"><input type="checkbox" id="incport" checked> Include port information</label>
+        <select id="portsel"><option value="">(all ports)</option></select>
+
+        <h3 class="mt">Country</h3>
+        <label class="opt"><input type="checkbox" id="incctr" checked> Include country information</label>
+        <select id="ctrsel"><option value="">(all countries)</option></select>
+        <div class="mini narrow">Untick country for world totals; untick port to aggregate over ports.</div>
+      </div>
+
+      <div class="col grow">
+        <h3>HS chapters <button class="linkbtn" data-setall="chapters:1">all</button><button class="linkbtn" data-setall="chapters:0">none</button><input type="text" id="hsfilter" placeholder="search chapters..."></h3>
+        <div class="scroll chapters" id="chapters"></div>
+        <div class="mt2">
+          <label class="opt inline"><input type="radio" name="hslevel" value="2" checked> 2-digit chapter totals</label>
+          <label class="opt inline"><input type="radio" name="hslevel" value="8"> all full HS codes in selected chapters</label>
+        </div>
+        <h3 class="mt">Extra full HS codes</h3>
+        <textarea id="fullhs" placeholder="e.g. 15111000 27011290"></textarea>
+        <div class="mini">Use exact BPS HS codes: 8-digit for 2017+, usually 10-digit for 2014–2016.</div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="primary" id="go">Fetch data</button>
+      <button class="ghost" id="cancel" hidden>Cancel</button>
+      <span class="mini" id="progtext"></span>
+    </div>
+    <div id="bar"><div></div></div>
+    <pre id="log"></pre>
+  </section>
+
+  <section class="card" id="results" hidden>
+    <div class="filters">
+      <label class="f"><span class="statlab">Pelabuhan</span><select id="fport"></select></label>
+      <label class="f"><span class="statlab">Negara</span><select id="fctr"></select></label>
+      <label class="f"><span class="statlab">HS code</span><select id="fhs"></select></label>
+      <label class="f"><span class="statlab">Search</span><input type="text" id="fsearch" placeholder="any text..."></label>
+      <button class="primary" id="download">Download CSV</button>
+    </div>
+    <div id="stats"></div>
+    <div id="tablewrap"><table id="tbl"></table></div>
+    <div class="mini" id="tablenote"></div>
+  </section>
+
+  <section class="card viz" id="vizcard" hidden>
+    <div class="vizgrid">
+      <div><h4 id="t_time">Value by period</h4><div id="c_time"></div></div>
+      <div id="c_ctr_wrap"><h4>Top countries by value (US$)</h4><div id="c_ctr"></div></div>
+      <div><h4>Top HS codes by value (US$)</h4><div id="c_hs"></div></div>
+      <div id="c_port_wrap"><h4>Top ports by value (US$)</h4><div id="c_port"></div></div>
+    </div>
+  </section>
 </main>
-<script>
-const BASE='https://webapi.bps.go.id/v1/api/dataexim';
-const FLOW={export:1,import:2};
-const DATA_START_YEAR=2014;
-const MONTHS=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-const HS_CHAPTERS=[['01','Live animals'],['02','Meat and edible meat offal'],['03','Fish and crustaceans'],['04','Dairy produce; eggs; honey'],['05','Other products of animal origin'],['06','Live trees and plants'],['07','Edible vegetables'],['08','Edible fruit and nuts'],['09','Coffee, tea, mate and spices'],['10','Cereals'],['11','Milling products; malt; starches'],['12','Oil seeds; oleaginous fruits'],['13','Lac; gums and resins'],['14','Vegetable plaiting materials'],['15','Animal/vegetable fats and oils'],['16','Preparations of meat or fish'],['17','Sugars and sugar confectionery'],['18','Cocoa and cocoa preparations'],['19','Preparations of cereals/flour/milk'],['20','Preparations of vegetables/fruit'],['21','Miscellaneous edible preparations'],['22','Beverages, spirits and vinegar'],['23','Food industry residues; animal feed'],['24','Tobacco'],['25','Salt; sulphur; earths; cement'],['26','Ores, slag and ash'],['27','Mineral fuels and oils'],['28','Inorganic chemicals'],['29','Organic chemicals'],['30','Pharmaceutical products'],['31','Fertilisers'],['32','Tanning/dyeing extracts; paints'],['33','Essential oils; perfumery; cosmetics'],['34','Soap; washing preparations; waxes'],['35','Albuminoids; glues; enzymes'],['36','Explosives; pyrotechnics; matches'],['37','Photographic/cinematographic goods'],['38','Miscellaneous chemical products'],['39','Plastics and articles thereof'],['40','Rubber and articles thereof'],['41','Raw hides, skins and leather'],['42','Leather articles; travel goods'],['43','Furskins and artificial fur'],['44','Wood and articles of wood'],['45','Cork and articles of cork'],['46','Straw/basketware manufactures'],['47','Pulp of wood'],['48','Paper and paperboard'],['49','Printed books and newspapers'],['50','Silk'],['51','Wool and animal hair'],['52','Cotton'],['53','Other vegetable textile fibres'],['54','Man-made filaments'],['55','Man-made staple fibres'],['56','Wadding, felt, nonwovens; ropes'],['57','Carpets'],['58','Special woven fabrics; lace'],['59','Impregnated/coated textile fabrics'],['60','Knitted or crocheted fabrics'],['61','Apparel, knitted or crocheted'],['62','Apparel, not knitted'],['63','Other made-up textile articles'],['64','Footwear'],['65','Headgear'],['66','Umbrellas; walking-sticks'],['67','Prepared feathers; artificial flowers'],['68','Articles of stone/plaster/cement'],['69','Ceramic products'],['70','Glass and glassware'],['71','Pearls, precious stones/metals; jewellery'],['72','Iron and steel'],['73','Articles of iron or steel'],['74','Copper and articles thereof'],['75','Nickel and articles thereof'],['76','Aluminium and articles thereof'],['78','Lead and articles thereof'],['79','Zinc and articles thereof'],['80','Tin and articles thereof'],['81','Other base metals; cermets'],['82','Tools and cutlery of base metal'],['83','Miscellaneous base-metal articles'],['84','Machinery and mechanical appliances'],['85','Electrical machinery and equipment'],['86','Railway locomotives and stock'],['87','Vehicles other than railway'],['88','Aircraft and spacecraft'],['89','Ships and boats'],['90','Optical/photographic/medical instruments'],['91','Clocks and watches'],['92','Musical instruments'],['93','Arms and ammunition'],['94','Furniture; bedding; lamps'],['95','Toys, games, sports equipment'],['96','Miscellaneous manufactured articles'],['97','Works of art; antiques']];
-let rows=[],cancelled=false,hasPort=true,hasCtr=true,MASTER=null,GEO=null;
-const el=id=>document.getElementById(id);
-function html(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
-function boxes(container,items,name,checkedFirst){el(container).innerHTML=items.map(([v,lab],i)=>`<label class="opt"><input type="checkbox" name="${name}" value="${v}" ${i===0&&checkedFirst?'checked':''}> ${html(lab)}</label>`).join('')}
-const yearNow=new Date().getFullYear();
-boxes('years',Array.from({length:yearNow-DATA_START_YEAR+1},(_,i)=>[yearNow-i,yearNow-i]),'year',true);
-boxes('monthsbox',MONTHS.map((m,i)=>[i+1,String(i+1).padStart(2,'0')+' '+m]),'month',false);
-boxes('chapters',HS_CHAPTERS.map(([c,d])=>[c,`[${c}] ${d}`]),'hs',false);
-(function init(){const k=localStorage.getItem('bps_api_key')||'';el('apikey').value=k;loadStaticData()})();
-function saveKey(){localStorage.setItem('bps_api_key',el('apikey').value.trim());el('progtext').textContent='API key saved in this browser.'}
-function clearKey(){localStorage.removeItem('bps_api_key');el('apikey').value='';el('progtext').textContent='API key cleared.'}
-async function loadStaticData(){try{const r=await fetch('hs_master.json',{cache:'no-store'});if(r.ok)MASTER=await r.json()}catch(e){}try{const r=await fetch('geo.json',{cache:'no-store'});if(r.ok){GEO=await r.json();const ports=Object.keys(GEO.ports||{}).sort();const countries=Object.keys(GEO.countries||{}).sort();el('portsel').innerHTML=`<option value="">(all ports - ${ports.length})</option>`+ports.map(p=>`<option>${html(p)}</option>`).join('');el('ctrsel').innerHTML=`<option value="">(all countries - ${countries.length})</option>`+countries.map(c=>`<option>${html(c)}</option>`).join('')}}catch(e){}}
-function setAll(container,on){el(container).querySelectorAll('input[type=checkbox]').forEach(b=>{if(b.closest('label').style.display!=='none')b.checked=on})}
-function filterChapters(){const q=el('hsfilter').value.toLowerCase();el('chapters').querySelectorAll('label').forEach(l=>{l.style.display=l.textContent.toLowerCase().includes(q)?'':'none'})}
-function picked(name){return [...document.querySelectorAll(`input[name=${name}]:checked`)].map(b=>b.value)}
-function eraForYear(y){y=+y;return y<=2016?'2012':(y<=2021?'2017':'2022')}
-function expandChapters(year,chapters){if(!MASTER)throw new Error('hs_master.json could not be loaded, so 8/10-digit expansion is unavailable.');const era=eraForYear(year);const want=new Set(chapters);return (MASTER[era]||[]).filter(x=>want.has(String(x[0]).slice(0,2))).map(x=>String(x[0]))}
-function splitBracketed(s){const m=String(s||'').match(/^\[([^\]]*)\]\s*(.*)/);return m?[m[1],m[2]]:['',s||'']}
-async function fetchJsonWithFallback(url){let last=null;for(const u of [url,'https://api.allorigins.win/raw?url='+encodeURIComponent(url)]){try{const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);return await r.json()}catch(e){last=e}}throw last||new Error('Fetch failed')}
-async function fetchExim(flow,hsCodes,year,month,key){const jenishs=String(hsCodes[0]).length<=2?1:2;const periode=month?1:2;const url=`${BASE}/sumber/${FLOW[flow]}/periode/${periode}/kodehs/${encodeURIComponent(hsCodes.join(';'))}/jenishs/${jenishs}/tahun/${year}/bulan/${month||1}/key/${encodeURIComponent(key)}`;const d=await fetchJsonWithFallback(url);if(d.status==='Error')throw new Error(d.message||'BPS API error');if(d['data-availability']!=='available')return[];return (d.data||[]).map(r=>{const [hs_code,hs_desc]=splitBracketed(r.kodehs);const [month_id,month_name]=splitBracketed(r.bulan||'');return{flow,year:r.tahun,month_id,month:month_name,hs_code,hs_desc,port:r.pod||'',country:r.ctr||'',value_usd:+r.value||0,netweight_kg:+r.netweight||0}})}
-async function fetchAll(){const key=el('apikey').value.trim();const flow=document.querySelector('input[name=flow]:checked').value;const years=picked('year');const months=picked('month').length?picked('month'):[''];const chapters=picked('hs');const full=el('fullhs').value.split(/[\s,;]+/).filter(Boolean);const bad=full.filter(c=>!/^\d{3,10}$/.test(c));const level=document.querySelector('input[name=hslevel]:checked').value;el('log').textContent='';if(!key)return el('log').textContent='Enter your BPS API key first.';if(!years.length)return el('log').textContent='Pick at least one year.';if(!chapters.length&&!full.length)return el('log').textContent='Pick at least one HS chapter or enter a full HS code.';if(bad.length)return el('log').textContent='These do not look like HS codes: '+bad.join(', ');const chunk=a=>Array.from({length:Math.ceil(a.length/20)},(_,i)=>a.slice(i*20,i*20+20));const jobs=[];try{if(chapters.length&&level==='2')for(const b of chunk(chapters))for(const y of years)for(const m of months)jobs.push({b,y,m});if(chapters.length&&level==='8'){for(const y of years){const codes=expandChapters(y,chapters);for(const b of chunk(codes))for(const m of months)jobs.push({b,y,m})}}if(full.length)for(const b of chunk(full))for(const y of years)for(const m of months)jobs.push({b,y,m})}catch(e){return el('log').textContent=e.message}rows=[];cancelled=false;el('go').disabled=true;el('cancel').style.display='';el('bar').style.display='';el('bar').firstElementChild.style.width='0%';el('results').style.display=el('vizcard').style.display='none';let done=0,empty=0;const run=async job=>{const r=await fetchExim(flow,job.b,job.y,job.m,key);if(!r.length)empty++;rows.push(...r);done++;el('bar').firstElementChild.style.width=(100*done/jobs.length)+'%';el('progtext').textContent=`${done}/${jobs.length} requests, ${rows.length.toLocaleString()} rows`};try{const queue=[...jobs];const workers=Array.from({length:Math.min(4,jobs.length)},async()=>{while(queue.length&&!cancelled)await run(queue.shift())});await Promise.all(workers);if(cancelled)el('log').textContent='Cancelled - showing what was fetched so far.'}catch(e){el('log').textContent='Error: '+(e.message||e)}el('go').disabled=false;el('cancel').style.display='none';hasPort=el('incport').checked;hasCtr=el('incctr').checked;const onePort=el('portsel').value,oneCtr=el('ctrsel').value;let note='';if(hasPort&&onePort){rows=rows.filter(r=>r.port===onePort);note+=` for ${onePort}`}if(hasCtr&&oneCtr){rows=rows.filter(r=>r.country===oneCtr);note+=` for ${oneCtr}`}if(!hasPort||!hasCtr){const agg=new Map();for(const r of rows){const p=hasPort?r.port:'',c=hasCtr?r.country:'';const k=[r.flow,r.year,r.month_id,r.month,r.hs_code,r.hs_desc,p,c].join('|');const a=agg.get(k);if(a){a.value_usd+=+r.value_usd||0;a.netweight_kg+=+r.netweight_kg||0}else agg.set(k,{...r,port:p,country:c,value_usd:+r.value_usd||0,netweight_kg:+r.netweight_kg||0})}rows=[...agg.values()];note+=!hasPort&&!hasCtr?' (world totals: aggregated over ports & countries)':!hasPort?' (aggregated over ports)':' (world: aggregated over countries)'}el('progtext').textContent=`${rows.length.toLocaleString()} rows${note}`+(empty?` (${empty} empty request(s) skipped)`:'');rows.sort((a,b)=>(+a.year-+b.year)||((+a.month_id||0)-(+b.month_id||0))||String(a.hs_code).localeCompare(b.hs_code)||String(a.port).localeCompare(b.port)||String(a.country).localeCompare(b.country));if(rows.length){buildFilters();el('results').style.display=el('vizcard').style.display='';render()}}
-function fillSelect(id,values,label){const s=el(id);s.innerHTML=`<option value="">(all ${label} - ${values.length})</option>`+values.map(v=>`<option>${html(v)}</option>`).join('')}
-function buildFilters(){el('fport').closest('.f').style.display=hasPort?'':'none';el('fctr').closest('.f').style.display=hasCtr?'':'none';el('fport').value='';el('fctr').value='';if(hasPort)fillSelect('fport',[...new Set(rows.map(r=>r.port))].sort(),'ports');if(hasCtr)fillSelect('fctr',[...new Set(rows.map(r=>r.country))].sort(),'countries');fillSelect('fhs',[...new Set(rows.map(r=>r.hs_code))].sort(),'HS');el('fsearch').value=''}
-function filtered(){const p=el('fport').value,c=el('fctr').value,h=el('fhs').value,q=el('fsearch').value.toLowerCase();return rows.filter(r=>(!p||r.port===p)&&(!c||r.country===c)&&(!h||r.hs_code===h)&&(!q||Object.values(r).join(' ').toLowerCase().includes(q)))}
-const COLS=['flow','year','month_id','month','hs_code','hs_desc','port','country','value_usd','netweight_kg'];const NUM=new Set(['value_usd','netweight_kg']);const activeCols=()=>COLS.filter(c=>(hasPort||c!=='port')&&(hasCtr||c!=='country'));
-function render(){const f=filtered();const usd=f.reduce((s,r)=>s+(+r.value_usd||0),0);const kg=f.reduce((s,r)=>s+(+r.netweight_kg||0),0);el('stats').innerHTML=`<span><div class="statlab">rows (filtered / fetched)</div><b>${f.length.toLocaleString()} / ${rows.length.toLocaleString()}</b></span><span><div class="statlab">total value (US$)</div><b>${usd.toLocaleString(undefined,{maximumFractionDigits:0})}</b></span><span><div class="statlab">total net weight (kg)</div><b>${kg.toLocaleString(undefined,{maximumFractionDigits:0})}</b></span>`;const cap=1000,show=f.slice(0,cap),cols=activeCols();el('tbl').innerHTML='<tr>'+cols.map(c=>`<th class="${NUM.has(c)?'num':''}">${c}</th>`).join('')+'</tr>'+show.map(r=>'<tr>'+cols.map(c=>{let v=r[c]??'';if(NUM.has(c))v=(+v).toLocaleString();return`<td class="${NUM.has(c)?'num':''}">${html(v)}</td>`}).join('')+'</tr>').join('');el('tablenote').textContent=f.length>cap?`Preview limited to ${cap.toLocaleString()} rows - CSV contains all ${f.length.toLocaleString()} filtered rows.`:'';renderCharts(f)}
-function fmtV(v){return v>=1e9?(v/1e9).toFixed(1)+'B':v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?(v/1e3).toFixed(0)+'K':String(Math.round(v))}
-function barChart(id,data){const max=Math.max(...data.map(d=>d[1]),1);el(id).innerHTML=data.map(([name,v])=>`<div class="barrow" title="${html(name)}: US$ ${Math.round(v).toLocaleString()}"><div class="barname">${html(name)}</div><div class="bartrack"><div class="bar" style="width:${Math.max(1,100*v/max)}%"></div></div><div class="barval">${fmtV(v)}</div></div>`).join('')||'<div class="mini">No data</div>'}
-function renderCharts(f){const sum=keyf=>{const m=new Map();for(const r of f){const k=keyf(r)||'(blank)';m.set(k,(m.get(k)||0)+(+r.value_usd||0))}return m};const per=[...sum(r=>r.month_id?`${r.year}-${String(r.month_id).padStart(2,'0')}`:String(r.year)).entries()].sort((a,b)=>a[0].localeCompare(b[0]));el('t_time').textContent=`Value by ${per[0]&&per[0][0].includes('-')?'month':'year'} (US$)`;barChart('c_time',per);const top=keyf=>[...sum(keyf).entries()].sort((a,b)=>b[1]-a[1]).slice(0,10);el('c_ctr_wrap').style.display=hasCtr?'':'none';if(hasCtr)barChart('c_ctr',top(r=>r.country));barChart('c_hs',top(r=>r.hs_code));el('c_port_wrap').style.display=hasPort?'':'none';if(hasPort)barChart('c_port',top(r=>r.port))}
-function downloadCSV(){const f=filtered();if(!f.length)return;const esc=v=>{v=String(v??'');return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};const cols=activeCols();const csv='\ufeff'+cols.join(',')+'\n'+f.map(r=>cols.map(c=>esc(r[c])).join(',')).join('\n');const flow=rows[0].flow,years=[...new Set(f.map(r=>r.year))].sort();const span=years.length>1?years[0]+'-'+years[years.length-1]:(years[0]||'');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download=`exim_${flow}_${span}.csv`;a.click();URL.revokeObjectURL(a.href)}
-</script>
+<script src="app.js"></script>
 </body>
 </html>
