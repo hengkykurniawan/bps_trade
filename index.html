@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BPS Foreign Trade Downloader</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+  <div>BPS Foreign Trade Downloader <small>GitHub Pages static app · webapi.bps.go.id/dataexim</small></div>
+</header>
+<main>
+  <section class="card warn">
+    <b>Important:</b> GitHub Pages is static. It cannot run the Python backend in <code>bps_exim_app.py</code>, so this version calls BPS from your browser. Enter your BPS API key below. If BPS blocks browser requests, choose one of the proxy modes. In proxy mode, the API request, including the key in the URL, passes through the selected proxy; use proxy mode only if you accept that trade-off.
+  </section>
+
+  <section class="card">
+    <div class="row">
+      <div class="col grow">
+        <h3>BPS API key</h3>
+        <input type="password" id="apikey" placeholder="paste your BPS API key" autocomplete="off">
+        <button class="ghost" id="savekey">Save in this browser</button>
+        <button class="linkbtn" id="clearkey">clear</button>
+        <div class="mini">The key stays in your browser localStorage. It is not written into the repository.</div>
+      </div>
+      <div class="col grow">
+        <h3>Request mode</h3>
+        <select id="requestmode">
+          <option value="auto">Auto: direct, then proxies</option>
+          <option value="direct">Direct to BPS only</option>
+          <option value="allorigins">Proxy: AllOrigins</option>
+          <option value="corsproxyio">Proxy: corsproxy.io</option>
+          <option value="codetabs">Proxy: CodeTabs</option>
+        </select>
+        <div class="mini">Use a proxy only when direct browser fetch is blocked by CORS.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="row">
+      <div class="col">
+        <h3>Flow</h3>
+        <label class="opt"><input type="radio" name="flow" value="export" checked> Ekspor (export)</label>
+        <label class="opt"><input type="radio" name="flow" value="import"> Impor (import)</label>
+      </div>
+
+      <div class="col">
+        <h3>Year <button class="linkbtn" data-setall="years:1">all</button><button class="linkbtn" data-setall="years:0">none</button></h3>
+        <div class="scroll" id="years"></div>
+      </div>
+
+      <div class="col">
+        <h3>Month <button class="linkbtn" data-setall="monthsbox:1">all</button><button class="linkbtn" data-setall="monthsbox:0">none</button></h3>
+        <div class="scroll" id="monthsbox"></div>
+        <div class="mini narrow">Tick months for monthly data. Leave all months unticked for annual totals.</div>
+
+        <h3 class="mt">Port</h3>
+        <label class="opt"><input type="checkbox" id="incport" checked> Include port information</label>
+        <select id="portsel"><option value="">(all ports)</option></select>
+
+        <h3 class="mt">Country</h3>
+        <label class="opt"><input type="checkbox" id="incctr" checked> Include country information</label>
+        <select id="ctrsel"><option value="">(all countries)</option></select>
+        <div class="mini narrow">Untick country for world totals; untick port to aggregate over ports.</div>
+      </div>
+
+      <div class="col grow">
+        <h3>HS chapters <button class="linkbtn" data-setall="chapters:1">all</button><button class="linkbtn" data-setall="chapters:0">none</button><input type="text" id="hsfilter" placeholder="search chapters..."></h3>
+        <div class="scroll chapters" id="chapters"></div>
+        <div class="mt2">
+          <label class="opt inline"><input type="radio" name="hslevel" value="2" checked> 2-digit chapter totals</label>
+          <label class="opt inline"><input type="radio" name="hslevel" value="8"> all full HS codes in selected chapters</label>
+        </div>
+        <h3 class="mt">Extra full HS codes</h3>
+        <textarea id="fullhs" placeholder="e.g. 15111000 27011290"></textarea>
+        <div class="mini">Use exact BPS HS codes: 8-digit for 2017+, usually 10-digit for 2014–2016.</div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="primary" id="go">Fetch data</button>
+      <button class="ghost" id="cancel" hidden>Cancel</button>
+      <span class="mini" id="progtext"></span>
+    </div>
+    <div id="bar"><div></div></div>
+    <pre id="log"></pre>
+  </section>
+
+  <section class="card" id="results" hidden>
+    <div class="filters">
+      <label class="f"><span class="statlab">Pelabuhan</span><select id="fport"></select></label>
+      <label class="f"><span class="statlab">Negara</span><select id="fctr"></select></label>
+      <label class="f"><span class="statlab">HS code</span><select id="fhs"></select></label>
+      <label class="f"><span class="statlab">Search</span><input type="text" id="fsearch" placeholder="any text..."></label>
+      <button class="primary" id="download">Download CSV</button>
+    </div>
+    <div id="stats"></div>
+    <div id="tablewrap"><table id="tbl"></table></div>
+    <div class="mini" id="tablenote"></div>
+  </section>
+
+  <section class="card viz" id="vizcard" hidden>
+    <div class="vizgrid">
+      <div><h4 id="t_time">Value by period</h4><div id="c_time"></div></div>
+      <div id="c_ctr_wrap"><h4>Top countries by value (US$)</h4><div id="c_ctr"></div></div>
+      <div><h4>Top HS codes by value (US$)</h4><div id="c_hs"></div></div>
+      <div id="c_port_wrap"><h4>Top ports by value (US$)</h4><div id="c_port"></div></div>
+    </div>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
