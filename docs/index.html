@@ -75,8 +75,8 @@
       padding: 8px 12px;
       background: var(--blue-50);
     }
-    .chapters { columns: 2; width: 100%; }
-    .chapters label.opt { break-inside: avoid; font-size: 12.5px; }
+    .chapters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px 14px; align-content: start; }
+    .chapters label.opt { font-size: 12.5px; }
     
     input[type=text], input[type=password], textarea, select {
       border: 1px solid var(--line);
@@ -187,7 +187,7 @@
       .shell { width: min(100% - 32px, 720px); }
       header { height: auto; padding: 14px 0; }
       .row { flex-direction: column; gap: 18px; }
-      .chapters { columns: 1; min-width: 100%; }
+      .chapters { grid-template-columns: minmax(0, 1fr); }
     }
   </style>
 </head>
@@ -238,6 +238,7 @@
           <div class="col">
             <h3>Month <button class="linkbtn" onclick="setAll('monthsbox',true)">all</button><button class="linkbtn" onclick="setAll('monthsbox',false)">none</button></h3>
             <div class="scroll" id="monthsbox"></div>
+            <label class="opt" style="margin-top:6px;"><input type="checkbox" id="aggmonth"> Aggregate months (combine selected into one total)</label>
             <div class="mini" style="max-width:200px; margin-top:8px;">Check months for monthly data (bulanan); leave all unchecked for annual totals (tahunan). Months not yet released are skipped.</div>
             <h3 style="margin-top:16px">Port (pelabuhan)</h3>
             <label class="opt"><input type="checkbox" id="incport" checked> Include port information</label>
@@ -428,7 +429,7 @@
       document.getElementById('client-config').style.display = 'block';
     }
 
-    let rows = [], cancelled = false, hasPort = true, hasCtr = true, hasHs = true;
+    let rows = [], cancelled = false, hasPort = true, hasCtr = true, hasHs = true, hasMonth = true;
 
     function el(id){ return document.getElementById(id); }
 
@@ -662,17 +663,19 @@
       hasPort = el('incport').checked;
       hasCtr = el('incctr').checked;
       hasHs = level !== 'agg';
+      hasMonth = !el('aggmonth').checked;
       const onePort = el('portsel').value, oneCtr = el('ctrsel').value;
       let note = '';
       if (hasPort && onePort) { rows = rows.filter(r => r.port === onePort); note += ` for ${onePort}`; }
       if (hasCtr && oneCtr) { rows = rows.filter(r => r.country === oneCtr); note += ` for ${oneCtr}`; }
-      if (!hasPort || !hasCtr || !hasHs) {
-        // Aggregate: sum values over remaining dimensions
+      if (!hasPort || !hasCtr || !hasHs || !hasMonth) {
+        // Aggregate: sum values over the switched-off dimensions
         const agg = new Map();
         for (const r of rows) {
           const p = hasPort ? r.port : '', c = hasCtr ? r.country : '';
           const h = hasHs ? r.hs_code : '';
-          const k = [r.flow, r.year, r.month_id, h, p, c].join('|');
+          const mi = hasMonth ? r.month_id : '', mn = hasMonth ? r.month : '';
+          const k = [r.flow, r.year, mi, h, p, c].join('|');
           const a = agg.get(k);
           if (a) { a.value_usd += +r.value_usd || 0; a.netweight_kg += +r.netweight_kg || 0; }
           else agg.set(k, {
@@ -681,12 +684,15 @@
             country: c,
             hs_code: h,
             hs_desc: hasHs ? r.hs_desc : 'All selected HS chapters/codes',
+            month_id: mi,
+            month: mn,
             value_usd: +r.value_usd || 0,
             netweight_kg: +r.netweight_kg || 0
           });
         }
         rows = [...agg.values()];
         const notes = [];
+        if (!hasMonth) notes.push('months');
         if (!hasPort) notes.push('ports');
         if (!hasCtr) notes.push('countries');
         if (!hasHs) notes.push('HS codes');
@@ -764,7 +770,9 @@
     const COLS = ['flow','year','month_id','month','hs_code','hs_desc','port','country','value_usd','netweight_kg'];
     const NUM = new Set(['value_usd','netweight_kg']);
     const activeCols = () => COLS.filter(c =>
-      (hasPort || c !== 'port') && (hasCtr || c !== 'country') && (hasHs || (c !== 'hs_code' && c !== 'hs_desc')));
+      (hasPort || c !== 'port') && (hasCtr || c !== 'country') &&
+      (hasHs || (c !== 'hs_code' && c !== 'hs_desc')) &&
+      (hasMonth || (c !== 'month_id' && c !== 'month')));
 
     function render(){
       const f = filtered();
