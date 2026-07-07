@@ -257,6 +257,7 @@
               <label class="opt" style="display:inline-block; margin-right:16px"><input type="radio" name="hslevel" value="2" checked> 2-digit (chapter totals)</label>
               <label class="opt" style="display:inline-block"><input type="radio" name="hslevel" value="8"> 8-digit (every full HS code in ticked chapters)</label>
             </div>
+            <label class="opt" style="margin-top:6px; margin-bottom:12px;"><input type="checkbox" id="inchs" checked> Include HS code information</label>
             <h3 style="margin-top:12px">Extra full HS codes (optional)</h3>
             <textarea id="fullhs" placeholder="e.g. 15111000 27011290  (space, comma or newline separated)"></textarea>
             <div class="mini" style="margin-top:6px;">Must match BPS's HS master exactly: 8-digit for 2017+, 10-digit for 2014&ndash;2016. No 4/6-digit prefixes.</div>
@@ -425,7 +426,7 @@
       document.getElementById('client-config').style.display = 'block';
     }
 
-    let rows = [], cancelled = false, hasPort = true, hasCtr = true;
+    let rows = [], cancelled = false, hasPort = true, hasCtr = true, hasHs = true;
 
     function el(id){ return document.getElementById(id); }
 
@@ -658,23 +659,36 @@
 
       hasPort = el('incport').checked;
       hasCtr = el('incctr').checked;
+      hasHs = el('inchs').checked;
       const onePort = el('portsel').value, oneCtr = el('ctrsel').value;
       let note = '';
       if (hasPort && onePort) { rows = rows.filter(r => r.port === onePort); note += ` for ${onePort}`; }
       if (hasCtr && oneCtr) { rows = rows.filter(r => r.country === oneCtr); note += ` for ${oneCtr}`; }
-      if (!hasPort || !hasCtr) {
+      if (!hasPort || !hasCtr || !hasHs) {
         // Aggregate: sum values over remaining dimensions
         const agg = new Map();
         for (const r of rows) {
           const p = hasPort ? r.port : '', c = hasCtr ? r.country : '';
-          const k = [r.flow, r.year, r.month_id, r.hs_code, p, c].join('|');
+          const h = hasHs ? r.hs_code : '';
+          const k = [r.flow, r.year, r.month_id, h, p, c].join('|');
           const a = agg.get(k);
           if (a) { a.value_usd += +r.value_usd || 0; a.netweight_kg += +r.netweight_kg || 0; }
-          else agg.set(k, {...r, port: p, country: c, value_usd: +r.value_usd || 0, netweight_kg: +r.netweight_kg || 0});
+          else agg.set(k, {
+            ...r,
+            port: p,
+            country: c,
+            hs_code: h,
+            hs_desc: hasHs ? r.hs_desc : 'All selected HS chapters/codes',
+            value_usd: +r.value_usd || 0,
+            netweight_kg: +r.netweight_kg || 0
+          });
         }
         rows = [...agg.values()];
-        note += !hasPort && !hasCtr ? ' (world totals: aggregated over ports & countries)'
-              : !hasPort ? ' (aggregated over ports)' : ' (world: aggregated over countries)';
+        const notes = [];
+        if (!hasPort) notes.push('ports');
+        if (!hasCtr) notes.push('countries');
+        if (!hasHs) notes.push('HS codes');
+        note += ` (aggregated over ${notes.join(' & ')})`;
       }
 
       el('progtext').textContent = `${rows.length.toLocaleString()} rows${note}`
@@ -698,10 +712,11 @@
     function buildFilters(){
       el('fport').closest('.f').style.display = hasPort ? '' : 'none';
       el('fctr').closest('.f').style.display = hasCtr ? '' : 'none';
-      el('fport').value = ''; el('fctr').value = '';
+      el('fhs').closest('.f').style.display = hasHs ? '' : 'none';
+      el('fport').value = ''; el('fctr').value = ''; el('fhs').value = '';
       if (hasPort) fillSelect('fport', [...new Set(rows.map(r=>r.port))].sort(), 'ports');
       if (hasCtr) fillSelect('fctr', [...new Set(rows.map(r=>r.country))].sort(), 'countries');
-      fillSelect('fhs', [...new Set(rows.map(r=>r.hs_code))].sort(), 'HS');
+      if (hasHs) fillSelect('fhs', [...new Set(rows.map(r=>r.hs_code))].sort(), 'HS');
       el('fsearch').value = '';
     }
     function filtered(){
@@ -715,7 +730,7 @@
     const COLS = ['flow','year','month_id','month','hs_code','hs_desc','port','country','value_usd','netweight_kg'];
     const NUM = new Set(['value_usd','netweight_kg']);
     const activeCols = () => COLS.filter(c =>
-      (hasPort || c !== 'port') && (hasCtr || c !== 'country'));
+      (hasPort || c !== 'port') && (hasCtr || c !== 'country') && (hasHs || (c !== 'hs_code' && c !== 'hs_desc')));
 
     function render(){
       const f = filtered();
@@ -832,6 +847,19 @@
       mapYearIdx = +v;
       el('mapperiodlab').textContent = mapYearIdx ? mapYears[mapYearIdx-1] : 'All years';
       updateMap(filtered());
+    }
+
+    function toggleMapFullscreen() {
+      const wrapper = document.querySelector('.map-wrapper');
+      const isFS = wrapper.classList.toggle('fullscreen');
+      el('fs-icon').textContent = isFS ? '✕' : '⛶';
+      el('fs-text').textContent = isFS ? 'Close' : 'Fullscreen';
+      
+      if (map) {
+        setTimeout(() => {
+          map.invalidateSize();
+        }, 100);
+      }
     }
 
     async function ensureMap(){
