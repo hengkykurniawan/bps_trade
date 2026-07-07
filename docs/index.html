@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="BPS Trade is a focused local web app for exploring Indonesian export and import data from the BPS API.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><rect width=%2264%22 height=%2264%22 rx=%2212%22 fill=%22%23071b45%22/><path d=%22M10 31h44l-7 12H17z%22 fill=%22white%22/><path d=%22M20 15h13v16H20zm16 6h10v10H36z%22 fill=%22%23e71d2b%22/></svg>">
+  <title>BPS Trade — Foreign trade data, without the friction</title>
+  <style>
+    :root {
+      --navy: #071b45;
+      --navy-2: #0b2858;
+      --red: #e71d2b;
+      --blue-50: #f4f8fd;
+      --blue-100: #e7f0fb;
+      --blue-200: #cbdcf1;
+      --muted: #54647f;
+      --line: #d8e1ec;
+      --white: #fff;
+      --radius: 12px;
+      --shadow: 0 20px 50px rgba(7, 27, 69, .14);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--navy);
+      background: var(--white);
+      scroll-behavior: smooth;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; }
+    a { color: inherit; }
+    button, input, select { font: inherit; }
+    .shell { width: min(1240px, calc(100% - 48px)); margin: 0 auto; }
+    header {
+      height: 80px;
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.95);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(14px);
+    }
+    header .shell { display: flex; align-items: center; justify-content: space-between; }
+    .brand { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; font-weight: 800; font-size: 25px; letter-spacing: -.5px; }
+    .brand strong { color: var(--red); }
+    .ship { width: 48px; height: 38px; color: var(--navy); }
+    nav { display: flex; gap: 42px; align-items: center; font-size: 14px; font-weight: 700; }
+    nav a { text-decoration: none; padding: 12px 0; border-bottom: 2px solid transparent; }
+    nav a:hover, nav a:focus-visible { color: var(--red); border-color: var(--red); outline: none; }
+    .hero {
+      min-height: 535px;
+      display: grid;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+      background-color: var(--blue-50);
+      background-image:
+        linear-gradient(rgba(101,145,198,.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(101,145,198,.08) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: auto -8% -85px 4%;
+      height: 180px;
+      border: 2px dashed rgba(70,124,190,.16);
+      border-radius: 50%;
+      transform: rotate(-3deg);
+      pointer-events: none;
+    }
+    .hero-grid { display: grid; grid-template-columns: .84fr 1.16fr; gap: 58px; align-items: center; position: relative; z-index: 1; }
+    h1 { font-size: clamp(48px, 5vw, 68px); line-height: 1.04; letter-spacing: -3.2px; margin: 0 0 24px; max-width: 650px; }
+    h1 span { color: var(--red); }
+    .lede { color: var(--muted); font-size: 20px; line-height: 1.55; max-width: 570px; margin: 0 0 34px; }
+    .actions { display: flex; align-items: center; gap: 30px; }
+    .button { display: inline-flex; align-items: center; gap: 10px; border-radius: 8px; padding: 15px 22px; font-size: 15px; font-weight: 800; text-decoration: none; transition: transform .18s ease, box-shadow .18s ease; }
+    .button-primary { background: var(--red); color: var(--white); box-shadow: 0 10px 24px rgba(231,29,43,.22); }
+    .button:hover { transform: translateY(-2px); }
+    .text-link { font-weight: 800; text-decoration: underline; text-underline-offset: 8px; text-decoration-thickness: 2px; }
+    .app-window { background: var(--white); border: 2px solid #aab8ca; border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px; transform: translateY(5px); }
+    .app-top { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--line); padding: 0 3px 12px; font-size: 11px; font-weight: 800; }
+    .app-mark { width: 22px; height: 22px; border-radius: 5px; display: grid; place-items: center; background: var(--navy); color: white; }
+    .app-body { display: grid; grid-template-columns: 100px 1fr; min-height: 310px; }
+    .side { border-right: 1px solid var(--line); padding: 14px 9px; display: flex; flex-direction: column; gap: 6px; font-size: 10px; font-weight: 700; }
+    .side span { padding: 9px 8px; border-radius: 6px; color: var(--muted); }
+    .side .active { background: var(--blue-100); color: var(--navy); }
+    .canvas { padding: 17px; min-width: 0; }
+    .canvas h2 { font-size: 12px; margin: 0 0 14px; }
+    .fields { display: grid; grid-template-columns: 1.2fr .7fr 1fr; gap: 9px; margin-bottom: 11px; }
+    .field label { display: block; font-size: 8px; font-weight: 800; margin-bottom: 5px; }
+    .fake-input { border: 1px solid var(--line); border-radius: 5px; padding: 8px; font-size: 9px; color: var(--muted); white-space: nowrap; overflow: hidden; }
+    .fetch { border: 0; background: var(--red); color: white; border-radius: 5px; padding: 8px 12px; font-size: 9px; font-weight: 800; margin: 2px 0 14px; }
+    .results { border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+    .result-title { padding: 10px; font-size: 9px; font-weight: 800; display: flex; justify-content: space-between; border-bottom: 1px solid var(--line); }
+    table { width: 100%; border-collapse: collapse; font-size: 7px; }
+    th, td { padding: 8px 7px; text-align: left; border-bottom: 1px solid var(--line); }
+    th { background: var(--blue-50); color: var(--muted); }
+    .workflow { padding: 64px 0 70px; background: var(--white); }
+    .section-title { font-size: 31px; text-align: center; margin: 0 0 44px; letter-spacing: -1.2px; }
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 48px; }
+    .step { display: grid; grid-template-columns: 48px 1fr; gap: 18px; align-items: start; position: relative; }
+    .step:not(:last-child)::after { content: ""; position: absolute; right: -29px; top: 22px; width: 22px; border-top: 2px dashed #b8c7da; }
+    .number { width: 48px; height: 48px; display: grid; place-items: center; background: #fff1f2; color: var(--red); border-radius: 10px; font-weight: 900; font-size: 18px; }
+    .step h3 { font-size: 17px; margin: 2px 0 8px; }
+    .step p { color: var(--muted); margin: 0; line-height: 1.55; font-size: 14px; }
+    .setup { color: white; background-color: #061936; background-image: linear-gradient(rgba(73,111,162,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(73,111,162,.1) 1px, transparent 1px); background-size: 32px 32px; padding: 70px 0; }
+    .setup-grid { display: grid; grid-template-columns: 1fr .9fr; align-items: center; gap: 70px; }
+    .terminal { background: #031124; border: 1px solid #506480; border-radius: var(--radius); padding: 25px; box-shadow: 0 22px 55px rgba(0,0,0,.24); min-height: 190px; }
+    .dots { display: flex; gap: 7px; margin-bottom: 28px; }
+    .dots i { display: block; width: 11px; height: 11px; border-radius: 50%; background: #fc6170; }
+    .dots i:nth-child(2) { background: #f8c85c; }
+    .dots i:nth-child(3) { background: #42cc6c; }
+    code { font: 15px/1.8 "SFMono-Regular", Consolas, monospace; color: #76ea50; }
+    .terminal p { margin: 3px 0; font: 14px/1.5 "SFMono-Regular", Consolas, monospace; color: #91a1bb; }
+    .setup h2 { font-size: 34px; margin: 0 0 14px; letter-spacing: -1.2px; }
+    .setup-copy { color: #b9c7dc; line-height: 1.6; margin: 0 0 24px; max-width: 470px; }
+    .command { display: flex; justify-content: space-between; align-items: center; background: #07152c; border: 1px solid #718099; border-radius: 9px; padding: 16px 18px; }
+    .copy { background: transparent; color: white; border: 0; cursor: pointer; padding: 6px 8px; font-size: 13px; font-weight: 700; }
+    .copy:hover, .copy:focus-visible { color: #76ea50; outline: 1px solid #76ea50; border-radius: 5px; }
+    footer { text-align: center; padding: 28px 20px; color: var(--muted); font-size: 14px; font-weight: 600; }
+    footer span { color: var(--red); }
+    @media (max-width: 900px) {
+      .shell { width: min(100% - 32px, 680px); }
+      header { height: 68px; }
+      nav a:not(:last-child) { display: none; }
+      .hero { padding: 68px 0; }
+      .hero-grid, .setup-grid { grid-template-columns: 1fr; }
+      h1 { font-size: clamp(43px, 12vw, 62px); }
+      .app-window { margin-top: 14px; }
+      .steps { grid-template-columns: 1fr; gap: 30px; }
+      .step:not(:last-child)::after { display: none; }
+    }
+    @media (max-width: 560px) {
+      .brand { font-size: 21px; }
+      .ship { width: 38px; }
+      nav { gap: 16px; }
+      h1 { letter-spacing: -2px; }
+      .lede { font-size: 17px; }
+      .actions { align-items: stretch; flex-direction: column; gap: 20px; }
+      .button { justify-content: center; }
+      .text-link { align-self: center; }
+      .app-window { padding: 8px; }
+      .app-body { grid-template-columns: 68px 1fr; }
+      .side { padding: 9px 4px; font-size: 8px; }
+      .canvas { padding: 10px; }
+      .fields { grid-template-columns: 1fr; }
+      .field:nth-child(n+2) { display: none; }
+      th:nth-child(n+4), td:nth-child(n+4) { display: none; }
+      .workflow, .setup { padding: 54px 0; }
+      .section-title { font-size: 27px; text-align: left; margin-bottom: 34px; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="shell">
+      <a class="brand" href="#overview" aria-label="BPS Trade home">
+        <svg class="ship" viewBox="0 0 64 48" aria-hidden="true"><path fill="currentColor" d="M11 12h12V2h9v10h7V7h10v5h7v15H11z"/><path fill="#e71d2b" d="M39 7h10v9H39zm12 5h5v9h-5z"/><path fill="currentColor" d="M4 25h56l-7 11H15zM2 38c6 0 6 4 12 4s6-4 12-4 6 4 12 4 6-4 12-4 6 4 12 4v4c-6 0-6-4-12-4s-6 4-12 4-6-4-12-4-6 4-12 4-6-4-12-4z"/></svg>
+        <span>BPS <strong>Trade</strong></span>
+      </a>
+      <nav aria-label="Primary navigation">
+        <a href="#overview">Overview</a>
+        <a href="#how-it-works">How it works</a>
+        <a href="https://github.com/hengkykurniawan/bps_trade">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" id="overview">
+      <div class="shell hero-grid">
+        <div>
+          <h1>Foreign trade data, without the friction<span>.</span></h1>
+          <p class="lede">Explore export and import data from Indonesia’s BPS API with a focused local web app.</p>
+          <div class="actions">
+            <a class="button button-primary" href="https://github.com/hengkykurniawan/bps_trade" aria-label="View BPS Trade on GitHub">View on GitHub</a>
+            <a class="text-link" href="#run-locally">Run locally →</a>
+          </div>
+        </div>
+        <div class="app-window" aria-label="Preview of the BPS Trade web app">
+          <div class="app-top"><span class="app-mark">↗</span> BPS Trade <span style="margin-left:auto;color:#8491a6;font-weight:600">Query</span></div>
+          <div class="app-body">
+            <aside class="side"><span class="active">⌕ &nbsp; Query</span><span>▤ &nbsp; Results</span><span>↶ &nbsp; History</span><span>ⓘ &nbsp; About</span></aside>
+            <div class="canvas">
+              <h2>Build a query</h2>
+              <div class="fields"><div class="field"><label>TRADE FLOW</label><div class="fake-input">Export⌄</div></div><div class="field"><label>YEAR</label><div class="fake-input">2023⌄</div></div><div class="field"><label>HS CODES</label><div class="fake-input">01, 15, 27</div></div></div>
+              <button class="fetch" type="button" tabindex="-1">Fetch data</button>
+              <div class="results"><div class="result-title"><span>Results</span><span>Export CSV ↓</span></div><table><thead><tr><th>Period</th><th>Flow</th><th>HS code</th><th>Partner</th><th>Value (USD)</th></tr></thead><tbody><tr><td>2023-01</td><td>Export</td><td>27090000</td><td>China</td><td>1,234,567</td></tr><tr><td>2023-01</td><td>Export</td><td>15111000</td><td>India</td><td>987,654</td></tr><tr><td>2023-01</td><td>Import</td><td>30049099</td><td>Singapore</td><td>123,456</td></tr></tbody></table></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="workflow" id="how-it-works">
+      <div class="shell">
+        <h2 class="section-title">From question to CSV</h2>
+        <div class="steps">
+          <article class="step"><span class="number">1</span><div><h3>Choose your trade flow</h3><p>Start with export or import—the direction that matches your research question.</p></div></article>
+          <article class="step"><span class="number">2</span><div><h3>Select period and HS codes</h3><p>Pick the years, months, chapters, or detailed product codes you need.</p></div></article>
+          <article class="step"><span class="number">3</span><div><h3>Filter and export</h3><p>Refine by port and partner country, then download a tidy CSV.</p></div></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="setup" id="run-locally">
+      <div class="shell setup-grid">
+        <div class="terminal" aria-label="Terminal launch example"><div class="dots"><i></i><i></i><i></i></div><code>$ python bps_exim_app.py</code><p>* BPS Trade running locally</p><p>* Open http://127.0.0.1:8766</p></div>
+        <div><h2>Run it on your machine</h2><p class="setup-copy">Clone the repository, add your BPS API key to <code>.bps_key</code>, and launch the app with Python. Your key stays on your machine.</p><div class="command"><code>python bps_exim_app.py</code><button class="copy" type="button" data-copy="python bps_exim_app.py">Copy</button></div></div>
+      </div>
+    </section>
+  </main>
+  <footer>Built for practical <span>trade-data research.</span></footer>
+  <script>
+    const copyButton = document.querySelector('[data-copy]');
+    copyButton.addEventListener('click', () => {
+      const helper = document.createElement('textarea');
+      helper.value = copyButton.dataset.copy;
+      helper.style.position = 'fixed';
+      helper.style.opacity = '0';
+      document.body.appendChild(helper);
+      helper.select();
+      document.execCommand('copy');
+      helper.remove();
+      copyButton.textContent = 'Copied';
+    });
+  </script>
+</body>
+</html>
