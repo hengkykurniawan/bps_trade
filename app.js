@@ -277,7 +277,16 @@ function buildFilters() {
   el('fctr').closest('.f').style.display = hasCtr ? '' : 'none';
   if (hasPort) fillSelect('fport', [...new Set(rows.map(r => r.port))].sort(), 'ports');
   if (hasCtr) fillSelect('fctr', [...new Set(rows.map(r => r.country))].sort(), 'countries');
-  fillSelect('fhs', [...new Set(rows.map(r => r.hs_code))].sort(), 'HS');
+  
+  const uniqueHs = [...new Set(rows.map(r => r.hs_code))].sort();
+  const s = el('fhs');
+  let htmlOpts = `<option value="">(all HS - ${uniqueHs.length})</option>`;
+  if (uniqueHs.length > 1) {
+    htmlOpts += `<option value="_total_">Total HS (sum of all)</option>`;
+  }
+  htmlOpts += uniqueHs.map(v => `<option value="${v}">${html(v)}</option>`).join('');
+  s.innerHTML = htmlOpts;
+  
   el('fsearch').value = '';
 }
 
@@ -286,10 +295,34 @@ function filtered() {
   const c = el('fctr').value;
   const h = el('fhs').value;
   const q = el('fsearch').value.toLowerCase();
-  return rows.filter(r =>
-    (!p || r.port === p) && (!c || r.country === c) && (!h || r.hs_code === h) &&
+  
+  let res = rows.filter(r =>
+    (!p || r.port === p) && (!c || r.country === c) &&
+    ((!h || h === '_total_') || r.hs_code === h) &&
     (!q || Object.values(r).join(' ').toLowerCase().includes(q))
   );
+  
+  if (h === '_total_') {
+    const agg = new Map();
+    for (const r of res) {
+      const k = [r.flow, r.year, r.month_id, r.month, r.port, r.country].join('|');
+      const a = agg.get(k);
+      if (a) {
+        a.value_usd += Number(r.value_usd) || 0;
+        a.netweight_kg += Number(r.netweight_kg) || 0;
+      } else {
+        agg.set(k, {
+          ...r,
+          hs_code: 'Total',
+          hs_desc: 'Total of selected HS codes',
+          value_usd: Number(r.value_usd) || 0,
+          netweight_kg: Number(r.netweight_kg) || 0
+        });
+      }
+    }
+    res = [...agg.values()];
+  }
+  return res;
 }
 
 const COLS = ['flow', 'year', 'month_id', 'month', 'hs_code', 'hs_desc', 'port', 'country', 'value_usd', 'netweight_kg'];
