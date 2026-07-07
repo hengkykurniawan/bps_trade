@@ -164,6 +164,19 @@
     .viz svg text.name { fill: var(--navy-2); }
     
     #map { height: 480px; border-radius: 8px; border: 1px solid var(--line); }
+    .map-wrapper.fullscreen {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      z-index: 9999 !important;
+      margin-top: 0 !important;
+    }
+    .map-wrapper.fullscreen #map {
+      height: 100% !important;
+      border-radius: 0 !important;
+    }
     #tip { position: fixed; display: none; background: var(--navy); color: #fff; font-size: 12px;
            padding: 6px 10px; border-radius: 6px; pointer-events: none; z-index: 2000; max-width: 280px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
     .legend { display: flex; gap: 18px; align-items: center; font-size: 13px; color: var(--muted); margin-bottom: 8px; }
