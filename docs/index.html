@@ -69,12 +69,13 @@
     .scroll {
       max-height: 210px;
       overflow-y: auto;
+      overflow-x: hidden;
       border: 1px solid var(--line);
       border-radius: 8px;
       padding: 8px 12px;
       background: var(--blue-50);
     }
-    .chapters { columns: 2; min-width: 430px; }
+    .chapters { columns: 2; width: 100%; }
     .chapters label.opt { break-inside: avoid; font-size: 12.5px; }
     
     input[type=text], input[type=password], textarea, select {
@@ -253,11 +254,11 @@
               <input type="text" id="hsfilter" placeholder="search..." style="margin-left:8px; padding:3px 8px; font-size:12px;" oninput="filterChapters()">
             </h3>
             <div class="scroll chapters" id="chapters" style="max-height: 180px;"></div>
-            <div id="levelbox" style="margin-top:8px">
-              <label class="opt" style="display:inline-block; margin-right:16px"><input type="radio" name="hslevel" value="2" checked> 2-digit (chapter totals)</label>
-              <label class="opt" style="display:inline-block"><input type="radio" name="hslevel" value="8"> 8-digit (every full HS code in ticked chapters)</label>
+            <div id="levelbox" style="margin-top:10px; margin-bottom:12px;">
+              <label class="opt" style="display:block; margin-bottom:3px;"><input type="radio" name="hslevel" value="2" checked> 2-digit (chapter totals)</label>
+              <label class="opt" style="display:block; margin-bottom:3px;"><input type="radio" name="hslevel" value="8"> 8-digit (every full HS code in ticked chapters)</label>
+              <label class="opt" style="display:block;"><input type="radio" name="hslevel" value="agg"> Aggregate (combine all selected HS into one total)</label>
             </div>
-            <label class="opt" style="margin-top:6px; margin-bottom:12px;"><input type="checkbox" id="inchs" checked> Include HS code information</label>
             <h3 style="margin-top:12px">Extra full HS codes (optional)</h3>
             <textarea id="fullhs" placeholder="e.g. 15111000 27011290  (space, comma or newline separated)"></textarea>
             <div class="mini" style="margin-top:6px;">Must match BPS's HS master exactly: 8-digit for 2017+, 10-digit for 2014&ndash;2016. No 4/6-digit prefixes.</div>
@@ -291,7 +292,7 @@
         <div class="vizgrid">
           <div><h4 id="t_time"></h4><div id="c_time"></div></div>
           <div id="c_ctr_wrap"><h4>Top countries by value (US$)</h4><div id="c_ctr"></div></div>
-          <div><h4>Top HS codes by value (US$)</h4><div id="c_hs"></div></div>
+          <div id="c_hs_wrap"><h4>Top HS codes by value (US$)</h4><div id="c_hs"></div></div>
           <div id="c_port_wrap"><h4>Top ports by value (US$)</h4><div id="c_port"></div></div>
         </div>
         <div class="mini" style="margin-top:12px;">Charts follow the filters above. Hover a bar for the exact value.</div>
@@ -304,6 +305,7 @@
           <span><span class="sw" style="background:#2a78d6"></span>export flows</span>
           <span><span class="sw" style="background:#eb6834"></span>import flows</span>
           <span><span class="sw" style="background:#0d366b;height:10px;width:10px;border-radius:50%"></span>Indonesian port</span>
+          <label class="opt" style="margin:0; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;"><input type="checkbox" id="showflows" checked onchange="if (rows.length) updateMap(filtered())"> Show flow lines</label>
         </div>
         <div class="legend" id="mapperiodrow" style="display:none; margin-top:10px; align-items:center;">
           <span>Year:</span>
@@ -589,7 +591,7 @@
       // BPS API rejects requests with > 20 HS codes
       const chunk = arr => Array.from({length: Math.ceil(arr.length/20)}, (_, i) => arr.slice(i*20, i*20+20));
       const jobs = [];
-      if (chapters.length && level === '2')
+      if (chapters.length && (level === '2' || level === 'agg'))
         for (const b of chunk(chapters)) for (const y of years) for (const m of months) jobs.push({b, y, m});
       
       if (chapters.length && level === '8') {
@@ -659,7 +661,7 @@
 
       hasPort = el('incport').checked;
       hasCtr = el('incctr').checked;
-      hasHs = el('inchs').checked;
+      hasHs = level !== 'agg';
       const onePort = el('portsel').value, oneCtr = el('ctrsel').value;
       let note = '';
       if (hasPort && onePort) { rows = rows.filter(r => r.port === onePort); note += ` for ${onePort}`; }
@@ -853,7 +855,8 @@
       const top = keyf => [...sum(keyf).entries()].sort((a,b) => b[1]-a[1]).slice(0, 10);
       el('c_ctr_wrap').style.display = hasCtr ? '' : 'none';
       if (hasCtr) drawBarsH('c_ctr', top(r => r.country), color);
-      drawBarsH('c_hs', top(r => r.hs_code), color);
+      el('c_hs_wrap').style.display = hasHs ? '' : 'none';
+      if (hasHs) drawBarsH('c_hs', top(r => r.hs_code), color);
       el('c_port_wrap').style.display = hasPort ? '' : 'none';
       if (hasPort) drawBarsH('c_port', top(r => r.port), color);
     }
@@ -922,6 +925,30 @@
       flowLayer.clearLayers();
       if (mapYearIdx) f = f.filter(r => String(r.year) === mapYears[mapYearIdx-1]);
       const col = f[0] && f[0].flow === 'import' ? ORANGE : BLUE;
+
+      if (!el('showflows').checked) {
+        // Ports-only view: each Indonesian port sized by its total value, no lines/countries.
+        const portSum = new Map(), miss = new Set();
+        for (const r of f) {
+          const p = hasPort ? r.port : '__ID__';
+          if (!p) continue;  // skip BPS NULL-port rows
+          portSum.set(p, (portSum.get(p)||0) + (+r.value_usd||0));
+        }
+        const maxv = Math.max(...portSum.values(), 1);
+        let shownPorts = 0;
+        for (const [p, v] of [...portSum.entries()].sort((a, b) => b[1]-a[1])) {
+          const pp = p === '__ID__' ? GEO.indonesia : GEO.ports[p];
+          if (!pp) { miss.add(p); continue; }
+          L.circleMarker(pp, {radius: 4 + 16*Math.sqrt(v/maxv), color:'#fff', weight:1, fillColor:'#0d366b', fillOpacity:.82})
+            .bindTooltip(`${p === '__ID__' ? 'Indonesia (all ports)' : esc_(p)}<br>US$ ${Math.round(v).toLocaleString()}`, {sticky:true}).addTo(flowLayer);
+          shownPorts++;
+        }
+        el('mapnote').textContent =
+          `${mapYearIdx ? mapYears[mapYearIdx-1] : 'all years'}: ${shownPorts} port(s) shown, sized by total value (flows hidden)` +
+          (miss.size ? ` - no coordinates for: ${[...miss].slice(0, 6).join(', ')}${miss.size > 6 ? ' …' : ''}` : '');
+        return;
+      }
+
       const flows = new Map();
       for (const r of f) {
         const k = (hasPort ? r.port : '__ID__') + '|' + r.country;
