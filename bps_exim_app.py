@@ -21,7 +21,7 @@ import sys
 import time
 import urllib.request
 import webbrowser
-from datetime import date
+from datetime import date, datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
@@ -191,6 +191,29 @@ def get_ports():
     return out
 
 
+_LATEST = None  # cache: {"year","month","label"} of newest available period
+
+
+def latest_period():
+    """Newest month for which dataexim has data, found by probing chapter 27
+    (mineral fuels, always traded) from the current month backwards. Cached
+    for the process lifetime; trade data lags ~1-2 months so it rarely moves."""
+    global _LATEST
+    if _LATEST is not None:
+        return _LATEST
+    today = date.today()
+    for year in (today.year, today.year - 1):
+        start = today.month if year == today.year else 12
+        for month in range(start, 0, -1):
+            if fetch_exim("export", ["27"], str(year), month):
+                _LATEST = {"year": year, "month": month,
+                           "label": f"{MONTHS[month - 1]} {year}",
+                           "checked_at": datetime.now().strftime("%d %b %Y, %H:%M")}
+                return _LATEST
+    _LATEST = None
+    return _LATEST
+
+
 def page_html():
     path = os.path.join(SCRIPT_DIR, "docs", "index.html")
     with open(path, "r", encoding="utf-8") as f:
@@ -236,6 +259,13 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200, json.dumps(
                 {"error": "geo.json missing - run: python geocode_geo.py"}),
                 "application/json")
+        if p.path == "/api/latest":
+            try:
+                return self.send(200, json.dumps({"latest": latest_period()}),
+                                 "application/json")
+            except Exception as e:
+                return self.send(200, json.dumps({"error": str(e)}),
+                                 "application/json")
         if p.path == "/api/ports":
             try:
                 return self.send(200, json.dumps({"ports": get_ports()}),
