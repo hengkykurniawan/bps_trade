@@ -3,4 +3,8 @@ __pycache__/
 *.py[cod]
 *.log
 .DS_Store
-
+.openai/design/
+dist/
+node_modules/
+.openai/qa/
+.vite-preview*.log

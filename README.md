@@ -26,3 +26,13 @@ python bps_exim.py get --flow export --hs 01 --year 2023
 
 The project uses only the Python standard library. Python 3.10 or newer is recommended.
 
+## Alternative Sites interface
+
+The alternative frontend lives in `site/` and keeps the existing GitHub Pages app in `docs/` unchanged.
+
+```powershell
+npm install
+npm run dev
+```
+
+Use `npm run build` to create the production bundle in `dist/`.

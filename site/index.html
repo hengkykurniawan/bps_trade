@@ -1,0 +1,1187 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="BPS Trade is a focused web app for exploring Indonesian export and import data from the BPS API.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><rect width=%2264%22 height=%2264%22 rx=%2212%22 fill=%22%23071b45%22/><path d=%22M10 31h44l-7 12H17z%22 fill=%22white%22/><path d=%22M20 15h13v16H20zm16 6h10v10H36z%22 fill=%22%23e71d2b%22/></svg>">
+  <title>BPS Trade — Foreign trade data downloader</title>
+  
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <style>
+    :root {
+      --navy: #071b45;
+      --navy-2: #0b2858;
+      --red: #e71d2b;
+      --red-hover: #c91622;
+      --blue-50: #f4f8fd;
+      --blue-100: #e7f0fb;
+      --blue-200: #cbdcf1;
+      --muted: #54647f;
+      --line: #d8e1ec;
+      --white: #fff;
+      --radius: 12px;
+      --shadow: 0 10px 30px rgba(7, 27, 69, .06);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--navy);
+      background: #f8fafc;
+      scroll-behavior: smooth;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; }
+    a { color: inherit; }
+    
+    .shell { width: min(1240px, calc(100% - 48px)); margin: 0 auto; }
+    header {
+      min-height: 80px;
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, .95);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      backdrop-filter: blur(14px);
+    }
+    header .shell { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+    .brand { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; font-weight: 800; font-size: 25px; letter-spacing: -.5px; }
+    .brand strong { color: var(--red); }
+    .ship { width: 48px; height: 38px; color: var(--navy); }
+    nav { display: flex; gap: 24px; align-items: center; font-size: 14px; font-weight: 700; }
+    nav a { text-decoration: none; padding: 2px 0; border-bottom: 2px solid transparent; }
+    nav a:hover, nav a:focus-visible { color: var(--red); outline: none; }
+
+    .card {
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow);
+      margin-bottom: 24px;
+    }
+    
+    .row { display: flex; flex-wrap: wrap; gap: 24px; }
+    .col { flex: 1; min-width: 200px; }
+    h3 { margin: 0 0 12px; font-size: 13px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); font-weight: 700; }
+    
+    .scroll {
+      max-height: 210px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 12px;
+      background: var(--blue-50);
+    }
+    .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+    .latest-top { display: flex; flex-direction: column; align-items: flex-end; text-align: right; line-height: 1.3; }
+    .latest-top > span:first-child { font-size: 11px; font-weight: 700; color: var(--navy); }
+    .latest-top .latest-note { font-size: 10px; font-weight: 400; color: var(--muted); }
+    .chapters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px 14px; align-content: start; }
+    .chapters label.opt { font-size: 12.5px; }
+    
+    input[type=text], input[type=password], textarea, select {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font: inherit;
+      background: var(--white);
+      color: var(--navy);
+      transition: border-color .15s ease, box-shadow .15s ease;
+    }
+    input[type=text]:focus, input[type=password]:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: var(--red);
+      box-shadow: 0 0 0 3px rgba(231, 29, 43, 0.1);
+    }
+    textarea { width: 100%; height: 72px; resize: vertical; }
+    
+    .mini { font-size: 12px; color: var(--muted); line-height: 1.5; }
+    
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background-color .15s ease, transform .1s ease;
+    }
+    button.primary {
+      background: var(--red);
+      color: var(--white);
+      box-shadow: 0 4px 12px rgba(231, 29, 43, 0.15);
+    }
+    button.primary:hover {
+      background: var(--red-hover);
+    }
+    button.primary:active {
+      transform: translateY(1px);
+    }
+    button.primary:disabled {
+      background: #f19ea3;
+      box-shadow: none;
+      cursor: default;
+    }
+    button.ghost {
+      background: var(--blue-100);
+      color: var(--navy);
+    }
+    button.ghost:hover {
+      background: var(--blue-200);
+    }
+    button.linkbtn {
+      background: none;
+      color: var(--red);
+      padding: 2px 4px;
+      text-decoration: underline;
+      font-size: 12px;
+    }
+    
+    .opt { display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; font-size: 13px; user-select: none; }
+    .opt input[type=checkbox], .opt input[type=radio] { accent-color: var(--red); cursor: pointer; }
+
+    #bar { height: 8px; background: var(--blue-100); border-radius: 4px; overflow: hidden; margin-top: 14px; display: none; }
+    #bar div { height: 100%; width: 0%; background: var(--red); transition: width .2s; }
+    #stats { display: flex; gap: 26px; flex-wrap: wrap; margin: 4px 0 16px; }
+    #stats b { font-size: 18px; color: var(--navy-2); }
+    .statlab { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; font-weight: 700; }
+    
+    table { border-collapse: collapse; width: 100%; font-size: 13px; }
+    th, td { border-bottom: 1px solid var(--line); padding: 8px 12px; text-align: left; }
+    th { background: var(--blue-50); color: var(--navy); position: sticky; top: 0; font-weight: 700; }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    #tablewrap { max-height: 480px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
+    #log { color: var(--red); font-size: 13px; white-space: pre-wrap; font-weight: 600; }
+    
+    .filters { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 14px; }
+    .filters .f { display: flex; flex-direction: column; gap: 4px; }
+    .filters select { min-width: 210px; }
+    .filters input[type=text] { min-width: 210px; }
+    
+    .vizgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; }
+    .viz h4 { margin: 0 0 12px; font-size: 14px; font-weight: 700; color: var(--navy); }
+    .viz svg { width: 100%; height: auto; display: block; }
+    .viz svg text { font: 11px Inter, sans-serif; fill: var(--muted); }
+    .viz svg text.val { fill: var(--navy); font-variant-numeric: tabular-nums; font-weight: 600; }
+    .viz svg text.name { fill: var(--navy-2); }
+    
+    #map { height: 480px; border-radius: 8px; border: 1px solid var(--line); }
+    .map-wrapper.fullscreen {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      z-index: 9999 !important;
+      margin-top: 0 !important;
+    }
+    .map-wrapper.fullscreen #map {
+      height: 100% !important;
+      border-radius: 0 !important;
+    }
+    #tip { position: fixed; display: none; background: var(--navy); color: #fff; font-size: 12px;
+           padding: 6px 10px; border-radius: 6px; pointer-events: none; z-index: 2000; max-width: 280px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    .legend { display: flex; gap: 18px; align-items: center; font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+    .legend .sw { display: inline-block; width: 14px; height: 4px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
+    
+    @media (max-width: 900px) {
+      .shell { width: min(100% - 32px, 720px); }
+      header { height: auto; padding: 14px 0; }
+      .row { flex-direction: column; gap: 18px; }
+      .chapters { grid-template-columns: minmax(0, 1fr); }
+    }
+  </style>
+  <link rel="stylesheet" href="site.css">
+</head>
+<body>
+  <header>
+    <div class="shell">
+      <a class="brand" href="#" aria-label="BPS Trade home">
+        <svg class="ship" viewBox="0 0 64 48" aria-hidden="true"><path fill="currentColor" d="M11 12h12V2h9v10h7V7h10v5h7v15H11z"/><path fill="#e71d2b" d="M39 7h10v9H39zm12 5h5v9h-5z"/><path fill="currentColor" d="M4 25h56l-7 11H15zM2 38c6 0 6 4 12 4s6-4 12-4 6 4 12 4 6-4 12-4 6 4 12 4v4c-6 0-6-4-12-4s-6 4-12 4-6-4-12-4-6 4-12 4-6-4-12-4z"/></svg>
+        <span>BPS <strong>Trade</strong></span>
+      </a>
+      <div class="header-right">
+        <nav aria-label="Primary navigation">
+          <a href="https://github.com/hengkykurniawan/bps_trade" target="_blank" rel="noopener">GitHub</a>
+        </nav>
+        <div id="latest-banner" class="latest-top" style="display:none"></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="app-shell">
+    <aside class="query-rail" aria-label="Current query summary">
+      <div class="rail-sticky">
+        <p class="rail-title" id="rail-title">Your query</p>
+        <p class="rail-intro" id="rail-intro">Review the current selections before fetching data.</p>
+        <ol class="rail-steps">
+          <li>
+            <span class="rail-number">1</span>
+            <div><b>Flow</b><span id="summary-flow">Export</span></div>
+          </li>
+          <li>
+            <span class="rail-number">2</span>
+            <div><b>Period</b><span id="summary-period">Latest year · annual</span></div>
+          </li>
+          <li>
+            <span class="rail-number">3</span>
+            <div><b>Geography</b><span id="summary-geo">All ports · all countries</span></div>
+          </li>
+          <li>
+            <span class="rail-number">4</span>
+            <div><b>Commodity</b><span id="summary-commodity">Choose HS chapters</span></div>
+          </li>
+        </ol>
+        <button class="rail-edit" id="edit-query" type="button">Edit query</button>
+      </div>
+    </aside>
+
+    <div class="workspace">
+      <section class="workspace-heading">
+        <div>
+          <h1 id="page-title">Build a trade dataset</h1>
+          <p id="page-intro">Choose a flow, period, geography, and commodity. We’ll fetch matching BPS records and prepare them for analysis.</p>
+        </div>
+      </section>
+
+      <section id="client-config" class="config-band" style="display:none">
+        <label class="field key-field"><span>BPS API key</span><input type="password" id="apikey" placeholder="Paste your API key" autocomplete="off"></label>
+        <div class="key-actions">
+          <button class="ghost compact" id="save-key" type="button">Save locally</button>
+          <button class="linkbtn" id="clear-key" type="button">Clear</button>
+        </div>
+        <label class="field mode-field"><span>Connection mode</span>
+          <select id="requestmode">
+            <option value="">Direct to BPS</option>
+            <option value="https://api.allorigins.win/raw?url=">Proxy · AllOrigins</option>
+            <option value="https://corsproxy.io/?">Proxy · corsproxy.io</option>
+            <option value="https://api.codetabs.com/v1/proxy/?quest=">Proxy · CodeTabs</option>
+          </select>
+        </label>
+        <input type="hidden" id="corsproxy" value="">
+        <p class="config-note">Your key stays in this browser. Proxy requests pass through the selected service.</p>
+      </section>
+
+      <section id="query-builder" class="query-builder">
+        <div class="query-step flow-step">
+          <div class="step-heading"><span>1</span><h2>Flow</h2></div>
+          <div class="segmented" role="group" aria-label="Trade flow">
+            <label><input type="radio" name="flow" value="export" checked><span>Export</span></label>
+            <label><input type="radio" name="flow" value="import"><span>Import</span></label>
+          </div>
+        </div>
+
+        <div class="query-step period-step">
+          <div class="step-heading"><span>2</span><h2>Period</h2></div>
+          <div class="step-content period-grid">
+          <div>
+            <h3>Year <button class="linkbtn" onclick="setAll('years',true)">all</button><button class="linkbtn" onclick="setAll('years',false)">none</button></h3>
+            <div class="scroll" id="years"></div>
+          </div>
+          <div>
+            <h3>Month <button class="linkbtn" onclick="setAll('monthsbox',true)">all</button><button class="linkbtn" onclick="setAll('monthsbox',false)">none</button></h3>
+            <div class="scroll" id="monthsbox"></div>
+            <label class="opt" style="margin-top:6px;"><input type="checkbox" id="aggmonth"> Aggregate months (combine selected into one total)</label>
+          </div>
+          <p class="mini period-help">Leave every month unchecked for annual totals. Unreleased months are skipped automatically.</p>
+          </div>
+        </div>
+
+        <div class="query-step geography-step">
+          <div class="step-heading"><span>3</span><h2>Geography</h2></div>
+          <div class="step-content geo-grid">
+          <div>
+            <h3>Port</h3>
+            <label class="opt"><input type="checkbox" id="incport" checked> Include port information</label>
+            <select id="portsel" style="width:100%; margin-top:4px"><option value="">(all ports)</option></select>
+          </div>
+          <div>
+            <h3>Country</h3>
+            <label class="opt"><input type="checkbox" id="incctr" checked> Include country information</label>
+            <select id="ctrsel" style="width:100%; margin-top:4px"><option value="">(all countries)</option></select>
+          </div>
+          <p class="mini geo-help">Turn off a dimension to aggregate across it. Turn off country for world totals.</p>
+          </div>
+        </div>
+
+        <div class="query-step commodity-step">
+          <div class="step-heading"><span>4</span><h2>Commodity</h2></div>
+          <div class="step-content commodity-grid">
+          <div class="chapter-picker">
+            <h3>HS chapters (2-digit)
+              <button class="linkbtn" onclick="setAll('chapters',true)">all</button>
+              <button class="linkbtn" onclick="setAll('chapters',false)">none</button>
+            </h3>
+            <input type="text" id="hsfilter" placeholder="Search by code or description" oninput="filterChapters()">
+            <div class="scroll chapters" id="chapters" style="max-height: 180px;"></div>
+          </div>
+          <div>
+            <h3>Commodity level</h3>
+            <div id="levelbox" style="margin-top:10px; margin-bottom:12px;">
+              <label class="opt level-option"><input type="radio" name="hslevel" value="2" checked><span><b>2-digit chapter</b><small>Chapter totals such as 01 or 02</small></span></label>
+              <label class="opt level-option"><input type="radio" name="hslevel" value="8"><span><b>Full HS code</b><small>Every full code in selected chapters</small></span></label>
+              <label class="opt level-option"><input type="radio" name="hslevel" value="agg"><span><b>Aggregate to chapter</b><small>Combine the selected HS codes</small></span></label>
+            </div>
+          </div>
+          <div class="extra-codes">
+            <h3 style="margin-top:12px">Extra full HS codes (optional)</h3>
+            <textarea id="fullhs" placeholder="Enter one code per line, e.g.&#10;15111000&#10;27011290"></textarea>
+            <div class="mini" style="margin-top:6px;">Use exact BPS codes: 8 digits for 2017+, usually 10 digits for 2014–2016.</div>
+            <div class="query-actions">
+              <button class="primary" id="go" onclick="fetchAll()">Fetch trade data</button>
+              <button class="ghost" id="cancel" onclick="cancelled=true" style="display:none">Cancel</button>
+            </div>
+          </div>
+        </div>
+        </div>
+        <div class="progress-row"><span>Progress</span><div id="bar"><div></div></div><span class="mini" id="progtext"></span></div>
+        <div id="log"></div>
+      </section>
+
+      <!-- Results section -->
+      <section class="results-panel" id="results" style="display:none">
+        <div class="filters">
+          <div class="f"><span class="statlab">Pelabuhan (port)</span><select id="fport" onchange="render()"></select></div>
+          <div class="f"><span class="statlab">Negara (country)</span><select id="fctr" onchange="render()"></select></div>
+          <div class="f"><span class="statlab">HS code</span><select id="fhs" onchange="render()"></select></div>
+          <div class="f"><span class="statlab">Search</span><input type="text" id="fsearch" placeholder="any text..." oninput="render()"></div>
+          <button class="primary" onclick="downloadCSV()" style="margin-left: auto;">Download CSV</button>
+        </div>
+        <div id="stats"></div>
+      </section>
+
+      <!-- Charts section -->
+      <section class="viz results-panel" id="vizcard" style="display:none">
+        <div class="vizgrid">
+          <div><h4 id="t_time"></h4><div id="c_time"></div></div>
+          <div id="c_ctr_wrap"><h4>Top countries by value (US$)</h4><div id="c_ctr"></div></div>
+          <div id="c_hs_wrap"><h4>Top HS codes by value (US$)</h4><div id="c_hs"></div></div>
+          <div id="c_port_wrap"><h4>Top ports by value (US$)</h4><div id="c_port"></div></div>
+        </div>
+        <div class="mini" style="margin-top:12px;">Charts follow the filters above. Hover a bar for the exact value.</div>
+      </section>
+
+      <!-- Map section -->
+      <section class="results-panel" id="mapcard" style="display:none">
+        <div class="legend" style="flex-wrap: wrap; gap: 16px;">
+          <b style="color:var(--navy)">Trade flow map</b>
+          <span><span class="sw" style="background:#2a78d6"></span>export flows</span>
+          <span><span class="sw" style="background:#eb6834"></span>import flows</span>
+          <span><span class="sw" style="background:#0d366b;height:10px;width:10px;border-radius:50%"></span>Indonesian port</span>
+          <label class="opt" style="margin:0; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;"><input type="checkbox" id="showflows" checked onchange="if (rows.length) updateMap(filtered())"> Show flow lines</label>
+        </div>
+        <div class="legend" id="mapperiodrow" style="display:none; margin-top:10px; align-items:center;">
+          <span>Year:</span>
+          <input type="range" id="mapslider" min="0" max="0" value="0" step="1"
+                 style="flex:1;max-width:360px" oninput="mapSlide(this.value)">
+          <b id="mapperiodlab" style="color:var(--navy);min-width:90px;margin-left:12px;"></b>
+        </div>
+        <div class="map-wrapper" style="position: relative; margin-top:12px;">
+          <div id="map"></div>
+          <button id="map-fs-btn" type="button" onclick="toggleMapFullscreen()" style="position: absolute; top: 10px; right: 10px; z-index: 1000; background: var(--white); color: var(--navy); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font-size: 12px; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); font-weight: 700;">
+            <span id="fs-icon">⛶</span> <span id="fs-text">Fullscreen</span>
+          </button>
+        </div>
+        <div class="mini" id="mapnote" style="margin-top:6px"></div>
+      </section>
+
+      <section class="results-panel table-panel" id="tablecard" style="display:none">
+        <div class="section-heading"><h2>Data preview</h2><span>First 1,000 filtered rows</span></div>
+        <div id="tablewrap"><table id="tbl"></table></div>
+        <div class="mini" id="tablenote" style="margin-top:6px"></div>
+      </section>
+
+      <div id="tip"></div>
+
+    </div>
+  </main>
+
+  <footer>
+    BPS Trade · BPS data availability varies by release period. Use API data responsibly.
+  </footer>
+
+  <script>
+    // Redirect to trailing slash on subdirectory hosting if visited without trailing slash
+    // and not visiting a specific file like index.html.
+    if (window.location.pathname !== '/' &&
+        !window.location.pathname.endsWith('/') && 
+        window.location.pathname.split('/').pop().indexOf('.') === -1) {
+      window.location.replace(window.location.href + '/');
+    }
+
+    // Save/Load Configs for Client-Side Mode
+    function saveApiKey(val) {
+      localStorage.setItem('bps_api_key', val.trim());
+    }
+    function saveCorsProxy(val) {
+      localStorage.setItem('bps_cors_proxy', val.trim());
+    }
+    function loadConfigs() {
+      const key = localStorage.getItem('bps_api_key');
+      const proxy = localStorage.getItem('bps_cors_proxy');
+      if (key) document.getElementById('apikey').value = key;
+      if (proxy) {
+        document.getElementById('corsproxy').value = proxy;
+        document.getElementById('requestmode').value = proxy;
+      }
+    }
+    loadConfigs();
+
+    document.getElementById('save-key').addEventListener('click', () => {
+      saveApiKey(document.getElementById('apikey').value);
+      document.getElementById('save-key').textContent = 'Saved';
+      window.setTimeout(() => document.getElementById('save-key').textContent = 'Save locally', 1200);
+    });
+    document.getElementById('clear-key').addEventListener('click', () => {
+      document.getElementById('apikey').value = '';
+      localStorage.removeItem('bps_api_key');
+    });
+    document.getElementById('requestmode').addEventListener('change', event => {
+      document.getElementById('corsproxy').value = event.target.value;
+      saveCorsProxy(event.target.value);
+    });
+
+    // Configuration Initialization with dynamic fallback
+    let CFG;
+    try {
+      CFG = __CFG__;
+    } catch (e) {
+      // Fallback configuration if __CFG__ is not replaced by Python
+      const yearNow = new Date().getFullYear();
+      const years = [];
+      for (let y = yearNow; y >= 2014; y--) years.push(y);
+      CFG = {
+        years: years,
+        months: ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"],
+        chapters: [
+          ["01", "Live animals"], ["02", "Meat and edible meat offal"],
+          ["03", "Fish and crustaceans"], ["04", "Dairy produce; eggs; honey"],
+          ["05", "Other products of animal origin"], ["06", "Live trees and plants"],
+          ["07", "Edible vegetables"], ["08", "Edible fruit and nuts"],
+          ["09", "Coffee, tea, mate and spices"], ["10", "Cereals"],
+          ["11", "Milling products; malt; starches"], ["12", "Oil seeds; oleaginous fruits"],
+          ["13", "Lac; gums and resins"], ["14", "Vegetable plaiting materials"],
+          ["15", "Animal/vegetable fats and oils"], ["16", "Preparations of meat or fish"],
+          ["17", "Sugars and sugar confectionery"], ["18", "Cocoa and cocoa preparations"],
+          ["19", "Preparations of cereals/flour/milk"], ["20", "Preparations of vegetables/fruit"],
+          ["21", "Miscellaneous edible preparations"], ["22", "Beverages, spirits and vinegar"],
+          ["23", "Food industry residues; animal feed"], ["24", "Tobacco"],
+          ["25", "Salt; sulphur; earths; cement"], ["26", "Ores, slag and ash"],
+          ["27", "Mineral fuels and oils"], ["28", "Inorganic chemicals"],
+          ["29", "Organic chemicals"], ["30", "Pharmaceutical products"],
+          ["31", "Fertilisers"], ["32", "Tanning/dyeing extracts; paints"],
+          ["33", "Essential oils; perfumery; cosmetics"], ["34", "Soap; washing preparations; waxes"],
+          ["35", "Albuminoids; glues; enzymes"], ["36", "Explosives; pyrotechnics; matches"],
+          ["37", "Photographic/cinematographic goods"], ["38", "Miscellaneous chemical products"],
+          ["39", "Plastics and articles thereof"], ["40", "Rubber and articles thereof"],
+          ["41", "Raw hides, skins and leather"], ["42", "Leather articles; travel goods"],
+          ["43", "Furskins and artificial fur"], ["44", "Wood and articles of wood"],
+          ["45", "Cork and articles of cork"], ["46", "Straw/basketware manufactures"],
+          ["47", "Pulp of wood"], ["48", "Paper and paperboard"],
+          ["49", "Printed books and newspapers"], ["50", "Silk"],
+          ["51", "Wool and animal hair"], ["52", "Cotton"],
+          ["53", "Other vegetable textile fibres"], ["54", "Man-made filaments"],
+          ["55", "Man-made staple fibres"], ["56", "Wadding, felt, nonwovens; ropes"],
+          ["57", "Carpets"], ["58", "Special woven fabrics; lace"],
+          ["59", "Impregnated/coated textile fabrics"], ["60", "Knitted or crocheted fabrics"],
+          ["61", "Apparel, knitted or crocheted"], ["62", "Apparel, not knitted"],
+          ["63", "Other made-up textile articles"], ["64", "Footwear"],
+          ["65", "Headgear"], ["66", "Umbrellas; walking-sticks"],
+          ["67", "Prepared feathers; artificial flowers"], ["68", "Articles of stone/plaster/cement"],
+          ["69", "Ceramic products"], ["70", "Glass and glassware"],
+          ["71", "Pearls, precious stones/metals; jewellery"], ["72", "Iron and steel"],
+          ["73", "Articles of iron or steel"], ["74", "Copper and articles thereof"],
+          ["75", "Nickel and articles thereof"], ["76", "Aluminium and articles thereof"],
+          ["78", "Lead and articles thereof"], ["79", "Zinc and articles thereof"],
+          ["80", "Tin and articles thereof"], ["81", "Other base metals; cermets"],
+          ["82", "Tools and cutlery of base metal"], ["83", "Miscellaneous base-metal articles"],
+          ["84", "Machinery and mechanical appliances"], ["85", "Electrical machinery and equipment"],
+          ["86", "Railway locomotives and stock"], ["87", "Vehicles other than railway"],
+          ["88", "Aircraft and spacecraft"], ["89", "Ships and boats"],
+          ["90", "Optical/photographic/medical instruments"], ["91", "Clocks and watches"],
+          ["92", "Musical instruments"], ["93", "Arms and ammunition"],
+          ["94", "Furniture; bedding; lamps"], ["95", "Toys, games, sports equipment"],
+          ["96", "Miscellaneous manufactured articles"], ["97", "Works of art; antiques"]
+        ],
+        hasMaster: true
+      };
+    }
+
+    // Execution Mode: client-side (GitHub Pages) vs local python-backed server
+    const isClientSideMode = !(CFG && CFG.isLocalServer);
+
+    if (isClientSideMode) {
+      document.getElementById('client-config').style.display = 'grid';
+    }
+
+    let rows = [], cancelled = false, hasPort = true, hasCtr = true, hasHs = true, hasMonth = true;
+
+    function el(id){ return document.getElementById(id); }
+
+    function showLatest(latest){
+      const b = el('latest-banner');
+      const label = typeof latest === 'string' ? latest : latest.label;
+      const at = (latest && latest.checked_at) ? latest.checked_at : '';
+      b.innerHTML = `<span>Latest Export/Import data: ${label}</span>` +
+        (at ? `<span class="latest-note">checked at server start · ${at}</span>` : '');
+      b.style.display = '';
+    }
+
+    function boxes(container, items, name, checkedFirst){
+      el(container).innerHTML = items.map(([v, lab], i) =>
+        `<label class="opt"><input type="checkbox" name="${name}" value="${v}" ${i===0&&checkedFirst?'checked':''}> ${lab}</label>`).join('');
+    }
+    boxes('years', CFG.years.map(y=>[y, y]), 'year', true);
+    boxes('monthsbox', CFG.months.map((m,i)=>[i+1, String(i+1).padStart(2,'0') + ' ' + m]), 'month', false);
+    boxes('chapters', CFG.chapters.map(([c,d])=>[c, `[${c}] ${d}`]), 'hs', false);
+
+    function syncSummary(){
+      const flow = document.querySelector('input[name=flow]:checked');
+      const years = [...document.querySelectorAll('input[name=year]:checked')].map(x => x.value);
+      const months = [...document.querySelectorAll('input[name=month]:checked')].map(x => String(x.value).padStart(2, '0'));
+      const chapters = [...document.querySelectorAll('input[name=hs]:checked')].map(x => x.value);
+      el('summary-flow').textContent = flow ? (flow.value === 'export' ? 'Export' : 'Import') : '—';
+      el('summary-period').textContent = `${years.length ? years.join(', ') : 'No year'} · ${months.length ? months.join(', ') : 'annual'}`;
+      el('summary-geo').textContent = `${el('incport').checked ? (el('portsel').value || 'All ports') : 'Ports aggregated'} · ${el('incctr').checked ? (el('ctrsel').value || 'All countries') : 'World total'}`;
+      el('summary-commodity').textContent = chapters.length ? `HS ${chapters.slice(0,4).join(', ')}${chapters.length > 4 ? ' +' + (chapters.length - 4) : ''}` : 'Choose HS chapters';
+    }
+    document.addEventListener('change', event => {
+      if (event.target.closest && event.target.closest('#query-builder')) syncSummary();
+    });
+    syncSummary();
+
+    function showResultsLayout(){
+      el('query-builder').style.display = 'none';
+      el('client-config').style.display = 'none';
+      el('page-title').textContent = 'Trade dataset';
+      el('page-intro').textContent = 'Filter, compare, map, and download the BPS records returned by your query.';
+      el('rail-title').textContent = 'Dataset';
+      el('rail-intro').textContent = 'Current result dimensions and selections.';
+      el('edit-query').style.display = 'block';
+      window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+    el('edit-query').addEventListener('click', () => {
+      el('query-builder').style.display = '';
+      if (isClientSideMode) el('client-config').style.display = 'grid';
+      el('page-title').textContent = 'Build a trade dataset';
+      el('page-intro').textContent = 'Choose a flow, period, geography, and commodity. We’ll fetch matching BPS records and prepare them for analysis.';
+      el('rail-title').textContent = 'Your query';
+      el('rail-intro').textContent = 'Review the current selections before fetching data.';
+      el('edit-query').style.display = 'none';
+      el('query-builder').scrollIntoView({behavior: 'smooth', block: 'start'});
+    });
+
+    // Client-Side Data Loading
+    let GEO = null;
+    let MASTER = null;
+
+    async function loadDropdowns() {
+      try {
+        if (isClientSideMode) {
+          // Pre-fetch geo coordinates and ports for Client-Side Mode
+          const geoRes = await fetch('geo.json');
+          GEO = await geoRes.json();
+          if (GEO.countries) {
+            const countries = Object.keys(GEO.countries).sort();
+            el('ctrsel').innerHTML = `<option value="">(all countries - ${countries.length})</option>` +
+              countries.map(c => `<option>${c.replace(/</g,'&lt;')}</option>`).join('');
+          }
+          const portsRes = await fetch('ports.json');
+          const ports = await portsRes.json();
+          if (ports) {
+            el('portsel').innerHTML = `<option value="">(all ports - ${ports.length})</option>` +
+              ports.map(p => `<option>${p.replace(/</g,'&lt;')}</option>`).join('');
+          }
+        } else {
+          // Fetch via Python endpoints
+          fetch('/api/ports').then(r => r.json()).then(d => {
+            if (!d.ports) return;
+            el('portsel').innerHTML = `<option value="">(all ports - ${d.ports.length})</option>` +
+              d.ports.map(p => `<option>${p.replace(/</g,'&lt;')}</option>`).join('');
+          }).catch(() => {});
+          fetch('/api/countries').then(r => r.json()).then(d => {
+            if (!d.countries) return;
+            el('ctrsel').innerHTML = `<option value="">(all countries - ${d.countries.length})</option>` +
+              d.countries.map(c => `<option>${c.replace(/</g,'&lt;')}</option>`).join('');
+          }).catch(() => {});
+          fetch('/api/latest').then(r => r.json()).then(d => {
+            if (d && d.latest && d.latest.label) showLatest(d.latest);
+          }).catch(() => {});
+        }
+      } catch (e) {
+        console.error("Failed to load initial metadata:", e);
+      }
+    }
+    loadDropdowns();
+
+    // Client-Side HS Code Expansion Master File Loader
+    async function ensureMaster() {
+      if (MASTER) return;
+      const res = await fetch('hs_master.json');
+      MASTER = await res.json();
+    }
+
+    function eraForYear(year) {
+      const y = parseInt(year);
+      return y <= 2016 ? "2012" : (y <= 2021 ? "2017" : "2022");
+    }
+
+    async function expandChapters(year, chapters) {
+      await ensureMaster();
+      const want = new Set(chapters);
+      const era = eraForYear(year);
+      const list = MASTER[era] || [];
+      return list.filter(item => want.has(item[0].substring(0, 2))).map(item => item[0]);
+    }
+
+    // Direct BPS API call in Client-Side Mode
+    async function fetchEximDirect(flow, hsCodes, year, month, apiKey, corsProxy = '') {
+      const flowVal = flow === 'export' ? 1 : 2;
+      const jenishs = hsCodes[0].length <= 2 ? 1 : 2;
+      const periode = month ? 1 : 2;
+      const monthVal = month || 1;
+      const codesStr = hsCodes.join(';');
+      let url = `https://webapi.bps.go.id/v1/api/dataexim/sumber/${flowVal}/periode/${periode}/kodehs/${encodeURIComponent(codesStr)}/jenishs/${jenishs}/tahun/${year}/bulan/${monthVal}/key/${apiKey}`;
+      
+      if (corsProxy) url = corsProxy + encodeURIComponent(url);
+      
+      const response = await fetch(url);
+      const d = await response.json();
+      if (d.status === "Error") {
+        throw new Error(d.message || 'Unknown BPS API error');
+      }
+      if (d['data-availability'] !== 'available') {
+        return [];
+      }
+      
+      const rows = [];
+      const splitBracketed = (s) => {
+        const m = (s || "").match(/^\[([^\]]*)\]\s*(.*)/);
+        return m ? [m[1], m[2]] : ["", s || ""];
+      };
+      
+      for (const r of (d.data || [])) {
+        const [hsCode, hsDesc] = splitBracketed(r.kodehs);
+        const [monthId, monthName] = splitBracketed(r.bulan);
+        rows.push({
+          flow: flow,
+          year: r.tahun,
+          month_id: monthId,
+          month: monthName,
+          hs_code: hsCode,
+          hs_desc: hsDesc,
+          port: r.pod || "",
+          country: r.ctr || "",
+          value_usd: r.value,
+          netweight_kg: r.netweight
+        });
+      }
+      return rows;
+    }
+
+    function setAll(container, on){
+      el(container).querySelectorAll('input[type=checkbox]').forEach(b => {
+        if (b.closest('label').style.display !== 'none') b.checked = on;
+      });
+    }
+    function filterChapters(){
+      const q = el('hsfilter').value.toLowerCase();
+      el('chapters').querySelectorAll('label').forEach(l => {
+        l.style.display = l.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+    }
+    function picked(name){
+      return [...document.querySelectorAll(`input[name=${name}]:checked`)].map(b => b.value);
+    }
+
+    async function fetchAll(){
+      const flow = document.querySelector('input[name=flow]:checked').value;
+      const years = picked('year');
+      const months = picked('month').length ? picked('month') : [''];
+      const chapters = picked('hs');
+      const full = el('fullhs').value.split(/[\s,;]+/).filter(Boolean);
+      const bad = full.filter(c => !/^\d{3,10}$/.test(c));
+
+      const level = document.querySelector('input[name=hslevel]:checked').value;
+
+      el('log').textContent = '';
+      if (!years.length) return el('log').textContent = 'Pick at least one year.';
+      if (!chapters.length && !full.length) return el('log').textContent = 'Pick at least one HS chapter or enter a full HS code.';
+      if (bad.length) return el('log').textContent = 'These do not look like HS codes: ' + bad.join(', ');
+      
+      let apiKey = '';
+      let corsProxy = '';
+      if (isClientSideMode) {
+        apiKey = el('apikey').value.trim();
+        corsProxy = el('corsproxy').value.trim();
+        if (!apiKey) return el('log').textContent = 'Please enter your BPS API Key in the Client-Side Configuration card at the top.';
+      }
+
+      if (level === '8' && chapters.length && !CFG.hasMaster)
+        return el('log').textContent = 'hs_master.json is missing next to the app - 8-digit expansion unavailable.';
+
+      // BPS API rejects requests with > 20 HS codes
+      const chunk = arr => Array.from({length: Math.ceil(arr.length/20)}, (_, i) => arr.slice(i*20, i*20+20));
+      const jobs = [];
+      if (chapters.length && (level === '2' || level === 'agg'))
+        for (const b of chunk(chapters)) for (const y of years) for (const m of months) jobs.push({b, y, m});
+      
+      if (chapters.length && level === '8') {
+        const cache = {};
+        for (const y of years) {
+          if (!(y in cache)) {
+            let codes;
+            if (isClientSideMode) {
+              try {
+                codes = await expandChapters(y, chapters);
+              } catch(e) {
+                return el('log').textContent = 'Error loading HS master: ' + e.message;
+              }
+            } else {
+              const r = await fetch(`/api/expand?year=${y}&chapters=${chapters.join(';')}`);
+              const d = await r.json();
+              if (d.error) return el('log').textContent = 'Error expanding chapters: ' + d.error;
+              codes = d.codes;
+            }
+            cache[y] = codes;
+          }
+          for (const b of chunk(cache[y])) for (const m of months) jobs.push({b, y, m});
+        }
+      }
+      if (full.length)
+        for (const b of chunk(full)) for (const y of years) for (const m of months) jobs.push({b, y, m});
+
+      rows = []; cancelled = false;
+      el('go').disabled = true; el('cancel').style.display = '';
+      el('bar').style.display = ''; el('bar').firstElementChild.style.width = '0%';
+      el('results').style.display = el('vizcard').style.display = el('mapcard').style.display = el('tablecard').style.display = 'none';
+
+      let done = 0, empty = 0;
+      const run = async job => {
+        let d;
+        if (isClientSideMode) {
+          try {
+            const fetchedRows = await fetchEximDirect(flow, job.b, job.y, job.m, apiKey, corsProxy);
+            d = { rows: fetchedRows };
+          } catch(e) {
+            d = { error: e.message };
+          }
+        } else {
+          const u = `/api/exim?flow=${flow}&hs=${job.b.join(';')}&year=${job.y}&month=${job.m}`;
+          const r = await fetch(u);
+          d = await r.json();
+        }
+        if (d.error) throw new Error(d.error);
+        if (!d.rows.length) empty++;
+        rows.push(...d.rows);
+        done++;
+        el('bar').firstElementChild.style.width = (100*done/jobs.length) + '%';
+        el('progtext').textContent = `${done}/${jobs.length} requests, ${rows.length.toLocaleString()} rows`;
+      };
+
+      try {
+        const queue = [...jobs];
+        const workers = Array.from({length: 4}, async () => {
+          while (queue.length && !cancelled) await run(queue.shift());
+        });
+        await Promise.all(workers);
+        if (cancelled) el('log').textContent = 'Cancelled - showing what was fetched so far.';
+      } catch (e) {
+        el('log').textContent = 'Error fetching data: ' + e.message;
+      }
+      el('go').disabled = false; el('cancel').style.display = 'none';
+
+      hasPort = el('incport').checked;
+      hasCtr = el('incctr').checked;
+      hasHs = level !== 'agg';
+      hasMonth = !el('aggmonth').checked;
+      const onePort = el('portsel').value, oneCtr = el('ctrsel').value;
+      let note = '';
+      if (hasPort && onePort) { rows = rows.filter(r => r.port === onePort); note += ` for ${onePort}`; }
+      if (hasCtr && oneCtr) { rows = rows.filter(r => r.country === oneCtr); note += ` for ${oneCtr}`; }
+      if (!hasPort || !hasCtr || !hasHs || !hasMonth) {
+        // Aggregate: sum values over the switched-off dimensions
+        const agg = new Map();
+        for (const r of rows) {
+          const p = hasPort ? r.port : '', c = hasCtr ? r.country : '';
+          const h = hasHs ? r.hs_code : '';
+          const mi = hasMonth ? r.month_id : '', mn = hasMonth ? r.month : '';
+          const k = [r.flow, r.year, mi, h, p, c].join('|');
+          const a = agg.get(k);
+          if (a) { a.value_usd += +r.value_usd || 0; a.netweight_kg += +r.netweight_kg || 0; }
+          else agg.set(k, {
+            ...r,
+            port: p,
+            country: c,
+            hs_code: h,
+            hs_desc: hasHs ? r.hs_desc : 'All selected HS chapters/codes',
+            month_id: mi,
+            month: mn,
+            value_usd: +r.value_usd || 0,
+            netweight_kg: +r.netweight_kg || 0
+          });
+        }
+        rows = [...agg.values()];
+        const notes = [];
+        if (!hasMonth) notes.push('months');
+        if (!hasPort) notes.push('ports');
+        if (!hasCtr) notes.push('countries');
+        if (!hasHs) notes.push('HS codes');
+        note += ` (aggregated over ${notes.join(' & ')})`;
+      }
+
+      el('progtext').textContent = `${rows.length.toLocaleString()} rows${note}`
+        + (empty ? ` (${empty} request(s) with no data skipped)` : '');
+      rows.sort((a, b) =>
+        (+a.year - +b.year) || ((+a.month_id || 0) - (+b.month_id || 0)) ||
+        a.hs_code.localeCompare(b.hs_code) || (a.port || '').localeCompare(b.port || '') ||
+        (a.country || '').localeCompare(b.country || ''));
+      if (rows.length) {
+        buildFilters();
+        el('results').style.display = el('vizcard').style.display = el('mapcard').style.display = el('tablecard').style.display = '';
+        showResultsLayout();
+        render();
+      }
+    }
+
+    function fillSelect(id, values, label){
+      const s = el(id);
+      s.innerHTML = `<option value="">(all ${label} - ${values.length})</option>` +
+        values.map(v => `<option>${v.replace(/</g,'&lt;')}</option>`).join('');
+    }
+    function buildFilters(){
+      el('fport').closest('.f').style.display = hasPort ? '' : 'none';
+      el('fctr').closest('.f').style.display = hasCtr ? '' : 'none';
+      el('fhs').closest('.f').style.display = hasHs ? '' : 'none';
+      el('fport').value = ''; el('fctr').value = ''; el('fhs').value = '';
+      if (hasPort) fillSelect('fport', [...new Set(rows.map(r=>r.port))].sort(), 'ports');
+      if (hasCtr) fillSelect('fctr', [...new Set(rows.map(r=>r.country))].sort(), 'countries');
+      if (hasHs) {
+        const uniqueHs = [...new Set(rows.map(r=>r.hs_code))].sort();
+        const s = el('fhs');
+        let htmlOpts = `<option value="">(all HS - ${uniqueHs.length})</option>`;
+        if (uniqueHs.length > 1) {
+          htmlOpts += `<option value="_total_">Total HS (sum of all)</option>`;
+        }
+        htmlOpts += uniqueHs.map(v => `<option value="${v}">${v}</option>`).join('');
+        s.innerHTML = htmlOpts;
+      }
+      el('fsearch').value = '';
+    }
+    function filtered(){
+      const p = el('fport').value, c = el('fctr').value, h = el('fhs').value,
+            q = el('fsearch').value.toLowerCase();
+      let res = rows.filter(r =>
+        (!p || r.port === p) && (!c || r.country === c) &&
+        ((!h || h === '_total_') || r.hs_code === h) &&
+        (!q || Object.values(r).join(' ').toLowerCase().includes(q))
+      );
+      if (h === '_total_') {
+        const agg = new Map();
+        for (const r of res) {
+          const k = [r.flow, r.year, r.month_id, r.port, r.country].join('|');
+          const a = agg.get(k);
+          if (a) {
+            a.value_usd += +r.value_usd || 0;
+            a.netweight_kg += +r.netweight_kg || 0;
+          } else {
+            agg.set(k, {
+              ...r,
+              hs_code: 'Total',
+              hs_desc: 'Total of selected HS codes',
+              value_usd: +r.value_usd || 0,
+              netweight_kg: +r.netweight_kg || 0
+            });
+          }
+        }
+        res = [...agg.values()];
+      }
+      return res;
+    }
+
+    const COLS = ['flow','year','month_id','month','hs_code','hs_desc','port','country','value_usd','netweight_kg'];
+    const NUM = new Set(['value_usd','netweight_kg']);
+    const activeCols = () => COLS.filter(c =>
+      (hasPort || c !== 'port') && (hasCtr || c !== 'country') &&
+      (hasHs || (c !== 'hs_code' && c !== 'hs_desc')) &&
+      (hasMonth || (c !== 'month_id' && c !== 'month')));
+
+    function render(){
+      const f = filtered();
+      const usd = f.reduce((s,r)=>s+(+r.value_usd||0), 0);
+      const kg  = f.reduce((s,r)=>s+(+r.netweight_kg||0), 0);
+      el('stats').innerHTML =
+        `<span><div class="statlab">rows (filtered / fetched)</div><b>${f.length.toLocaleString()} / ${rows.length.toLocaleString()}</b></span>` +
+        `<span><div class="statlab">total value (US$)</div><b>${usd.toLocaleString(undefined,{maximumFractionDigits:0})}</b></span>` +
+        `<span><div class="statlab">total net weight (kg)</div><b>${kg.toLocaleString(undefined,{maximumFractionDigits:0})}</b></span>`;
+      const cap = 1000, show = f.slice(0, cap), cols = activeCols();
+      el('tbl').innerHTML =
+        '<tr>' + cols.map(c=>`<th class="${NUM.has(c)?'num':''}">${c}</th>`).join('') + '</tr>' +
+        show.map(r => '<tr>' + cols.map(c => {
+          let v = r[c] ?? '';
+          if (NUM.has(c)) v = (+v).toLocaleString();
+          return `<td class="${NUM.has(c)?'num':''}">${String(v).replace(/</g,'&lt;')}</td>`;
+        }).join('') + '</tr>').join('');
+      el('tablenote').textContent = f.length > cap
+        ? `Preview limited to ${cap.toLocaleString()} rows - the CSV download contains all ${f.length.toLocaleString()} filtered rows.` : '';
+      renderCharts(f);
+      rebuildSlider(f);
+      updateMap(f);
+    }
+
+    // ---------------------------------------------------------------- charts
+    const BLUE = '#ff4d45', ORANGE = '#2a78d6', GRID = '#e1e8f1', AXIS = '#aebed2';
+    const esc_ = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+    const fmtV = v => v >= 1e9 ? (v/1e9).toFixed(1)+'B' : v >= 1e6 ? (v/1e6).toFixed(1)+'M'
+                  : v >= 1e3 ? (v/1e3).toFixed(0)+'K' : String(Math.round(v));
+    function showTip(ev, html){ const t = el('tip'); t.innerHTML = html; t.style.display = 'block';
+      t.style.left = Math.min(ev.clientX + 14, innerWidth - 290) + 'px'; t.style.top = (ev.clientY + 14) + 'px'; }
+    function hideTip(){ el('tip').style.display = 'none'; }
+
+    function roundTopBar(x, y, w, h){
+      const r = Math.min(4, w/2, h);
+      return `M${x},${y+h} L${x},${y+r} Q${x},${y} ${x+r},${y} L${x+w-r},${y} Q${x+w},${y} ${x+w},${y+r} L${x+w},${y+h} Z`;
+    }
+    function roundEndBarH(x, y, w, h){
+      const r = Math.min(4, h/2, w);
+      return `M${x},${y} L${x+w-r},${y} Q${x+w},${y} ${x+w},${y+r} L${x+w},${y+h-r} Q${x+w},${y+h} ${x+w-r},${y+h} L${x},${y+h} Z`;
+    }
+
+    function drawBarsV(id, data, color){
+      const W = 560, H = 230, L = 48, R = 8, T = 10, B = 24;
+      const max = Math.max(...data.map(d => d[1]), 1);
+      const iw = W - L - R, ih = H - T - B, n = data.length;
+      const slot = iw/n, bw = Math.max(2, Math.min(56, slot - 2));
+      let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`;
+      for (let g = 0; g <= 4; g++) {
+        const y = T + ih - ih*g/4;
+        s += `<line x1="${L}" y1="${y}" x2="${W-R}" y2="${y}" stroke="${g ? GRID : AXIS}" stroke-width="1"/>`
+           + `<text x="${L-6}" y="${y+4}" text-anchor="end" class="val">${fmtV(max*g/4)}</text>`;
+      }
+      const step = Math.ceil(n / 8);
+      data.forEach(([lab, v], i) => {
+        const x = L + slot*i + (slot - bw)/2, h = Math.max(1, ih*v/max), y = T + ih - h;
+        s += `<path d="${roundTopBar(x, y, bw, h)}" fill="${color}" data-tip="${esc_(lab)}: US$ ${Math.round(v).toLocaleString()}"/>`;
+        if (i % step === 0) s += `<text x="${x+bw/2}" y="${H-8}" text-anchor="middle">${esc_(lab)}</text>`;
+      });
+      el(id).innerHTML = s + '</svg>';
+    }
+
+    function drawBarsH(id, data, color){
+      const W = 560, L = 170, R = 62, RH = 25, T = 4;
+      const H = T + data.length*RH + 6;
+      const max = Math.max(...data.map(d => d[1]), 1);
+      const iw = W - L - R;
+      let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`;
+      s += `<line x1="${L-4}" y1="${T}" x2="${L-4}" y2="${H-4}" stroke="${AXIS}" stroke-width="1"/>`;
+      data.forEach(([lab, v], i) => {
+        const y = T + RH*i + 4, w = Math.max(1, iw*v/max);
+        const name = lab.length > 24 ? lab.slice(0, 23) + '…' : lab;
+        s += `<text x="${L-10}" y="${y+11}" text-anchor="end" class="name">${esc_(name)}</text>`
+           + `<path d="${roundEndBarH(L-4, y, w, RH-9)}" fill="${color}" data-tip="${esc_(lab)}: US$ ${Math.round(v).toLocaleString()}"/>`
+           + `<text x="${L+w+2}" y="${y+11}" class="val">${fmtV(v)}</text>`;
+      });
+      el(id).innerHTML = s + '</svg>';
+    }
+
+    function renderCharts(f){
+      const color = f[0] && f[0].flow === 'import' ? ORANGE : BLUE;
+      const sum = keyf => { const m = new Map();
+        for (const r of f){ const k = keyf(r); m.set(k, (m.get(k)||0) + (+r.value_usd||0)); } return m; };
+      const per = [...sum(r => r.month_id ? `${r.year}-${r.month_id}` : String(r.year)).entries()]
+        .sort((a,b) => a[0].localeCompare(b[0]));
+      el('t_time').textContent = `Value by ${per[0] && per[0][0].includes('-') ? 'month' : 'year'} (US$)`;
+      drawBarsV('c_time', per, color);
+      const top = keyf => [...sum(keyf).entries()].sort((a,b) => b[1]-a[1]).slice(0, 10);
+      el('c_ctr_wrap').style.display = hasCtr ? '' : 'none';
+      if (hasCtr) drawBarsH('c_ctr', top(r => r.country), color);
+      el('c_hs_wrap').style.display = hasHs ? '' : 'none';
+      if (hasHs) drawBarsH('c_hs', top(r => r.hs_code), color);
+      el('c_port_wrap').style.display = hasPort ? '' : 'none';
+      if (hasPort) drawBarsH('c_port', top(r => r.port), color);
+    }
+
+    document.addEventListener('mousemove', ev => {
+      const tgt = ev.target.closest && ev.target.closest('[data-tip]');
+      if (tgt) showTip(ev, tgt.getAttribute('data-tip')); else hideTip();
+    });
+
+    // ------------------------------------------------------------------- map
+    let map = null, flowLayer = null;
+    let mapYears = [], mapYearIdx = 0;
+
+    function rebuildSlider(f){
+      const years = [...new Set(f.map(r => String(r.year)))].sort();
+      if (years.join('|') !== mapYears.join('|')) { mapYears = years; mapYearIdx = 0; }
+      el('mapperiodrow').style.display = years.length > 1 ? 'flex' : 'none';
+      const s = el('mapslider');
+      s.max = years.length; s.value = mapYearIdx;
+      el('mapperiodlab').textContent = mapYearIdx ? mapYears[mapYearIdx-1] : 'All years';
+    }
+    function mapSlide(v){
+      mapYearIdx = +v;
+      el('mapperiodlab').textContent = mapYearIdx ? mapYears[mapYearIdx-1] : 'All years';
+      updateMap(filtered());
+    }
+
+    function toggleMapFullscreen() {
+      const wrapper = document.querySelector('.map-wrapper');
+      const isFS = wrapper.classList.toggle('fullscreen');
+      el('fs-icon').textContent = isFS ? '✕' : '⛶';
+      el('fs-text').textContent = isFS ? 'Close' : 'Fullscreen';
+      
+      if (map) {
+        setTimeout(() => {
+          map.invalidateSize();
+        }, 100);
+      }
+    }
+
+    async function ensureMap(){
+      if (!window.L) { el('mapnote').textContent = 'Map library could not load (no internet access to unpkg.com).'; return false; }
+      if (!GEO) {
+        if (isClientSideMode) {
+          const d = await fetch('geo.json').then(r => r.json()).catch(() => ({error:'fetch failed'}));
+          if (d.error) { el('mapnote').textContent = 'No coordinates yet: ' + d.error; return false; }
+          GEO = d;
+        } else {
+          const d = await fetch('/api/geo').then(r => r.json()).catch(() => ({error:'fetch failed'}));
+          if (d.error) { el('mapnote').textContent = 'No coordinates yet: ' + d.error; return false; }
+          GEO = d;
+        }
+      }
+      if (!map) {
+        map = L.map('map', {worldCopyJump: true}).setView([-2.5, 118], 3);
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          {attribution: '&copy; OpenStreetMap contributors', maxZoom: 12}).addTo(map);
+        flowLayer = L.layerGroup().addTo(map);
+      }
+      setTimeout(() => map.invalidateSize(), 60);
+      return true;
+    }
+
+    async function updateMap(f){
+      if (!(await ensureMap())) return;
+      flowLayer.clearLayers();
+      if (mapYearIdx) f = f.filter(r => String(r.year) === mapYears[mapYearIdx-1]);
+      const col = f[0] && f[0].flow === 'import' ? ORANGE : BLUE;
+
+      if (!el('showflows').checked) {
+        // Ports-only view: each Indonesian port sized by its total value, no lines/countries.
+        const portSum = new Map(), miss = new Set();
+        for (const r of f) {
+          const p = hasPort ? r.port : '__ID__';
+          if (!p) continue;  // skip BPS NULL-port rows
+          portSum.set(p, (portSum.get(p)||0) + (+r.value_usd||0));
+        }
+        const maxv = Math.max(...portSum.values(), 1);
+        let shownPorts = 0;
+        for (const [p, v] of [...portSum.entries()].sort((a, b) => b[1]-a[1])) {
+          const pp = p === '__ID__' ? GEO.indonesia : GEO.ports[p];
+          if (!pp) { miss.add(p); continue; }
+          L.circleMarker(pp, {radius: 4 + 16*Math.sqrt(v/maxv), color:'#fff', weight:1, fillColor:'#0d366b', fillOpacity:.82})
+            .bindTooltip(`${p === '__ID__' ? 'Indonesia (all ports)' : esc_(p)}<br>US$ ${Math.round(v).toLocaleString()}`, {sticky:true}).addTo(flowLayer);
+          shownPorts++;
+        }
+        el('mapnote').textContent =
+          `${mapYearIdx ? mapYears[mapYearIdx-1] : 'all years'}: ${shownPorts} port(s) shown, sized by total value (flows hidden)` +
+          (miss.size ? ` - no coordinates for: ${[...miss].slice(0, 6).join(', ')}${miss.size > 6 ? ' …' : ''}` : '');
+        return;
+      }
+
+      const flows = new Map();
+      for (const r of f) {
+        const k = (hasPort ? r.port : '__ID__') + '|' + r.country;
+        flows.set(k, (flows.get(k)||0) + (+r.value_usd||0));
+      }
+      const items = [...flows.entries()].map(([k, v]) => { const [p, c] = k.split('|'); return {p, c, v}; })
+        .sort((a, b) => b.v - a.v);
+      const shown = items.slice(0, 250);
+      const maxv = shown[0] ? shown[0].v : 1;
+      const miss = new Set(), portSum = new Map(), ctrSum = new Map();
+      for (const {p, c, v} of shown) {
+        const pp = p === '__ID__' ? GEO.indonesia : GEO.ports[p];
+        if (!pp) { miss.add(p); continue; }
+        portSum.set(p, (portSum.get(p)||0) + v);
+        if (!c) continue;
+        const cc = GEO.countries[c];
+        if (!cc) { miss.add(c); continue; }
+        let clon = cc[1];
+        if (clon - pp[1] > 180) clon -= 360;
+        if (clon - pp[1] < -180) clon += 360;
+        L.polyline([[pp[0], pp[1]], [cc[0], clon]],
+            {color: col, weight: 1 + 6*Math.sqrt(v/maxv), opacity: .4})
+          .bindTooltip(`${p === '__ID__' ? 'Indonesia' : esc_(p)} &harr; ${esc_(c)}<br>US$ ${Math.round(v).toLocaleString()}`, {sticky: true})
+          .addTo(flowLayer);
+        ctrSum.set(c, (ctrSum.get(c)||0) + v);
+      }
+      for (const [p, v] of portSum) {
+        const pp = p === '__ID__' ? GEO.indonesia : GEO.ports[p];
+        if (!pp) continue;
+        L.circleMarker(pp, {radius: 3 + 6*Math.sqrt(v/maxv), color: '#fff', weight: 1, fillColor: '#0d366b', fillOpacity: .9})
+          .bindTooltip(`${p === '__ID__' ? 'Indonesia (all ports)' : esc_(p)}<br>US$ ${Math.round(v).toLocaleString()}`).addTo(flowLayer);
+      }
+      for (const [c, v] of ctrSum) {
+        const cc = GEO.countries[c];
+        if (!cc) continue;
+        L.circleMarker(cc, {radius: 2 + 5*Math.sqrt(v/maxv), color: '#fff', weight: 1, fillColor: col, fillOpacity: .8})
+          .bindTooltip(`${esc_(c)}<br>US$ ${Math.round(v).toLocaleString()}`).addTo(flowLayer);
+      }
+      el('mapnote').textContent =
+        `${mapYearIdx ? mapYears[mapYearIdx-1] : 'all years'}: ` +
+        `${shown.length}${items.length > shown.length ? ' of ' + items.length.toLocaleString() : ''} flows shown (largest first); ` +
+        `line width and marker size scale with value` +
+        (miss.size ? ` - no coordinates for: ${[...miss].slice(0, 6).join(', ')}${miss.size > 6 ? ' …' : ''}` : '');
+    }
+
+    function downloadCSV(){
+      const f = filtered();
+      if (!f.length) return;
+      const esc = v => { v = String(v ?? ''); return /[",\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; };
+      const cols = activeCols();
+      const csv = '﻿' + cols.join(',') + '\n' + f.map(r => cols.map(c=>esc(r[c])).join(',')).join('\n');
+      const flow = rows[0].flow, years = [...new Set(f.map(r=>r.year))].sort();
+      const span = years.length > 1 ? years[0]+'-'+years[years.length-1] : (years[0]||'');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'}));
+      a.download = `exim_${flow}_${span}.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    // Local visual-QA state. It is only enabled with ?demo=1 and never affects normal use.
+    if (new URLSearchParams(location.search).get('demo') === '1') {
+      window.addEventListener('load', async () => {
+        await loadDropdowns();
+        const countries = ['CHINA', 'JAPAN', 'UNITED STATES', 'KOREA, REPUBLIC OF', 'NETHERLANDS'];
+        const ports = ['TANJUNG PRIOK', 'TANJUNG PERAK', 'BATAM ISLAND', 'MAKASSAR', 'BELAWAN'];
+        const commodities = [
+          ['03', 'Fish and crustaceans'],
+          ['15', 'Animal or vegetable fats and oils'],
+          ['27', 'Mineral fuels and oils'],
+          ['44', 'Wood and articles of wood'],
+          ['85', 'Electrical machinery and equipment']
+        ];
+        rows = [];
+        for (const year of [2023, 2024]) for (let month = 1; month <= 12; month++) {
+          countries.forEach((country, index) => rows.push({
+            flow: 'export', year, month_id: String(month).padStart(2, '0'), month: CFG.months[month - 1],
+            hs_code: commodities[index][0], hs_desc: commodities[index][1], port: ports[index], country,
+            value_usd: (14 - index * 1.7) * 10000000 + month * 1250000 + (year - 2023) * 9500000,
+            netweight_kg: (22 - index * 2.1) * 10000000 + month * 850000
+          }));
+        }
+        buildFilters();
+        el('results').style.display = el('vizcard').style.display = el('mapcard').style.display = el('tablecard').style.display = '';
+        el('summary-period').textContent = '2023–2024 · monthly';
+        el('summary-commodity').textContent = 'HS 03, 15, 27, 44, 85';
+        showResultsLayout();
+        render();
+      });
+    }
+  </script>
+</body>
+</html>
