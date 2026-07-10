@@ -1,10 +1,13 @@
 import { defineConfig } from 'vite';
-import { copyFileSync, mkdirSync } from 'node:fs';
+import { copyFileSync, mkdirSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 function sitesBundle() {
   return {
     name: 'sites-bundle',
+    buildStart() {
+      rmSync(resolve('dist'), { recursive: true, force: true });
+    },
     closeBundle() {
       const output = resolve('dist');
       mkdirSync(resolve(output, 'server'), { recursive: true });
@@ -20,7 +23,7 @@ export default defineConfig({
   base: './',
   plugins: [sitesBundle()],
   build: {
-    outDir: '../dist',
+    outDir: '../dist/client',
     emptyOutDir: true
   }
 });
