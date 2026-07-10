@@ -207,7 +207,7 @@ h3 { margin: 0 0 8px; color: var(--ink-soft); font-size: 11px; letter-spacing: .
 .vizgrid > div { padding: 8px 0 16px; border-bottom: 1px solid var(--rule-soft); }
 .vizgrid #c_port_wrap { display: none !important; }
 .viz h4 { color: var(--ink); }
-#map { height: 220px; border-radius: 6px; border-color: var(--rule); }
+#map { height: 660px; border-radius: 6px; border-color: var(--rule); }
 #tablewrap { border-radius: 6px; border-color: var(--rule); }
 .section-heading { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
 .section-heading h2 { margin: 0; font-size: 18px; }
