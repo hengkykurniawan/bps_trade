@@ -6,10 +6,10 @@
   <meta name="description" content="BPS Trade is a focused web app for exploring Indonesian export and import data from the BPS API.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><rect width=%2264%22 height=%2264%22 rx=%2212%22 fill=%22%23071b45%22/><path d=%22M10 31h44l-7 12H17z%22 fill=%22white%22/><path d=%22M20 15h13v16H20zm16 6h10v10H36z%22 fill=%22%23e71d2b%22/></svg>">
   <title>BPS Trade — Foreign trade data downloader</title>
-  
+
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  
+
   <style>
     :root {
       --navy: #071b45;
@@ -32,7 +32,7 @@
     * { box-sizing: border-box; }
     body { margin: 0; min-width: 320px; }
     a { color: inherit; }
-    
+
     .shell { width: min(1240px, calc(100% - 48px)); margin: 0 auto; }
     header {
       min-height: 80px;
@@ -61,11 +61,11 @@
       box-shadow: var(--shadow);
       margin-bottom: 24px;
     }
-    
+
     .row { display: flex; flex-wrap: wrap; gap: 24px; }
     .col { flex: 1; min-width: 200px; }
     h3 { margin: 0 0 12px; font-size: 13px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); font-weight: 700; }
-    
+
     .scroll {
       max-height: 210px;
       overflow-y: auto;
@@ -81,7 +81,7 @@
     .latest-top .latest-note { font-size: 10px; font-weight: 400; color: var(--muted); }
     .chapters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px 14px; align-content: start; }
     .chapters label.opt { font-size: 12.5px; }
-    
+
     input[type=text], input[type=password], textarea, select {
       border: 1px solid var(--line);
       border-radius: 8px;
@@ -97,9 +97,9 @@
       box-shadow: 0 0 0 3px rgba(231, 29, 43, 0.1);
     }
     textarea { width: 100%; height: 72px; resize: vertical; }
-    
+
     .mini { font-size: 12px; color: var(--muted); line-height: 1.5; }
-    
+
     button {
       border: 0;
       border-radius: 8px;
@@ -139,7 +139,7 @@
       text-decoration: underline;
       font-size: 12px;
     }
-    
+
     .opt { display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; font-size: 13px; user-select: none; }
     .opt input[type=checkbox], .opt input[type=radio] { accent-color: var(--red); cursor: pointer; }
 
@@ -148,26 +148,26 @@
     #stats { display: flex; gap: 26px; flex-wrap: wrap; margin: 4px 0 16px; }
     #stats b { font-size: 18px; color: var(--navy-2); }
     .statlab { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; font-weight: 700; }
-    
+
     table { border-collapse: collapse; width: 100%; font-size: 13px; }
     th, td { border-bottom: 1px solid var(--line); padding: 8px 12px; text-align: left; }
     th { background: var(--blue-50); color: var(--navy); position: sticky; top: 0; font-weight: 700; }
     td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
     #tablewrap { max-height: 480px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
     #log { color: var(--red); font-size: 13px; white-space: pre-wrap; font-weight: 600; }
-    
+
     .filters { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 14px; }
     .filters .f { display: flex; flex-direction: column; gap: 4px; }
     .filters select { min-width: 210px; }
     .filters input[type=text] { min-width: 210px; }
-    
+
     .vizgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; }
     .viz h4 { margin: 0 0 12px; font-size: 14px; font-weight: 700; color: var(--navy); }
     .viz svg { width: 100%; height: auto; display: block; }
     .viz svg text { font: 11px Inter, sans-serif; fill: var(--muted); }
     .viz svg text.val { fill: var(--navy); font-variant-numeric: tabular-nums; font-weight: 600; }
     .viz svg text.name { fill: var(--navy-2); }
-    
+
     #map { height: 480px; border-radius: 8px; border: 1px solid var(--line); }
     .map-wrapper.fullscreen {
       position: fixed !important;
@@ -186,7 +186,7 @@
            padding: 6px 10px; border-radius: 6px; pointer-events: none; z-index: 2000; max-width: 280px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
     .legend { display: flex; gap: 18px; align-items: center; font-size: 13px; color: var(--muted); margin-bottom: 8px; }
     .legend .sw { display: inline-block; width: 14px; height: 4px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
-    
+
     @media (max-width: 900px) {
       .shell { width: min(100% - 32px, 720px); }
       header { height: auto; padding: 14px 0; }
@@ -194,6 +194,7 @@
       .chapters { grid-template-columns: minmax(0, 1fr); }
     }
   </style>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <header>
@@ -206,83 +207,145 @@
         <nav aria-label="Primary navigation">
           <a href="https://github.com/hengkykurniawan/bps_trade" target="_blank" rel="noopener">GitHub</a>
         </nav>
-        <div id="latest-banner" class="latest-top" style="display:none"></div>
+        <div id="latest-banner" class="latest-top">
+          <span>Latest data</span>
+          <span class="latest-note">Newest available BPS release; unreleased months are skipped.</span>
+        </div>
       </div>
     </div>
   </header>
 
-  <main style="padding: 24px 0;">
-    <div class="shell">
+  <main class="app-shell">
+    <aside class="query-rail" aria-label="Current query summary">
+      <div class="rail-sticky">
+        <p class="rail-title" id="rail-title">Your query</p>
+        <p class="rail-intro" id="rail-intro">Review the current selections before fetching data.</p>
+        <ol class="rail-steps">
+          <li>
+            <span class="rail-number">1</span>
+            <div><b>Flow</b><span id="summary-flow">Export</span></div>
+          </li>
+          <li>
+            <span class="rail-number">2</span>
+            <div><b>Period</b><span id="summary-period">Latest year · annual</span></div>
+          </li>
+          <li>
+            <span class="rail-number">3</span>
+            <div><b>Geography</b><span id="summary-geo">All ports · all countries</span></div>
+          </li>
+          <li>
+            <span class="rail-number">4</span>
+            <div><b>Commodity</b><span id="summary-commodity">Choose HS chapters</span></div>
+          </li>
+        </ol>
+        <button class="rail-edit" id="edit-query" type="button">Edit query</button>
+      </div>
+    </aside>
 
-      <!-- GitHub Pages Mode Config Panel -->
-      <div id="client-config" class="card" style="display:none; border: 1px solid var(--blue-200); background: var(--blue-50);">
-        <h3 style="margin-top:0; color: var(--navy-2);">Client-Side Configuration</h3>
-        <p class="mini" style="margin-top:0; margin-bottom:16px;">This page is running directly in your browser. Please enter your BPS API key. A CORS proxy prefix is optional, but needed if browser blocks requests due to CORS restrictions.</p>
-        <div class="row">
-          <div class="col" style="flex:1; min-width:280px; display:flex; flex-direction:column; gap:6px;">
-            <label style="font-weight: 700; font-size: 11px; color: var(--muted); letter-spacing: 0.5px;">BPS API KEY</label>
-            <input type="password" id="apikey" placeholder="Enter BPS API Key" oninput="saveApiKey(this.value)">
-          </div>
-          <div class="col" style="flex:1; min-width:280px; display:flex; flex-direction:column; gap:6px;">
-            <label style="font-weight: 700; font-size: 11px; color: var(--muted); letter-spacing: 0.5px;">CORS PROXY PREFIX (OPTIONAL)</label>
-            <input type="text" id="corsproxy" placeholder="e.g. https://cors-anywhere.herokuapp.com/" oninput="saveCorsProxy(this.value)">
+    <div class="workspace">
+      <section class="workspace-heading">
+        <div>
+          <h1 id="page-title">Build a trade dataset</h1>
+          <p id="page-intro">Choose a flow, period, geography, and commodity. We’ll fetch matching BPS records and prepare them for analysis.</p>
+        </div>
+      </section>
+
+      <section id="client-config" class="config-band" style="display:none">
+        <label class="field key-field"><span>BPS API key</span><input type="password" id="apikey" placeholder="Paste your API key" autocomplete="off"></label>
+        <div class="key-actions">
+          <button class="ghost compact" id="save-key" type="button">Save locally</button>
+          <button class="linkbtn" id="clear-key" type="button">Clear</button>
+        </div>
+        <label class="field mode-field"><span>Connection mode</span>
+          <select id="requestmode">
+            <option value="">Direct to BPS</option>
+            <option value="https://api.allorigins.win/raw?url=">Proxy · AllOrigins</option>
+            <option value="https://corsproxy.io/?">Proxy · corsproxy.io</option>
+            <option value="https://api.codetabs.com/v1/proxy/?quest=">Proxy · CodeTabs</option>
+          </select>
+        </label>
+        <input type="hidden" id="corsproxy" value="">
+        <p class="config-note">Your key stays in this browser. Proxy requests pass through the selected service.</p>
+      </section>
+
+      <section id="query-builder" class="query-builder">
+        <div class="query-step flow-step">
+          <div class="step-heading"><span>1</span><h2>Flow</h2></div>
+          <div class="segmented" role="group" aria-label="Trade flow">
+            <label><input type="radio" name="flow" value="export" checked><span>Export</span></label>
+            <label><input type="radio" name="flow" value="import"><span>Import</span></label>
           </div>
         </div>
-      </div>
 
-      <!-- Main app settings -->
-      <div class="card">
-        <div class="row">
-          <div class="col">
-            <h3>Flow</h3>
-            <label class="opt"><input type="radio" name="flow" value="export" checked> Ekspor (export)</label>
-            <label class="opt"><input type="radio" name="flow" value="import"> Impor (import)</label>
-          </div>
-          <div class="col">
+        <div class="query-step period-step">
+          <div class="step-heading"><span>2</span><h2>Period</h2></div>
+          <div class="step-content period-grid">
+          <div>
             <h3>Year <button class="linkbtn" onclick="setAll('years',true)">all</button><button class="linkbtn" onclick="setAll('years',false)">none</button></h3>
             <div class="scroll" id="years"></div>
           </div>
-          <div class="col">
+          <div>
             <h3>Month <button class="linkbtn" onclick="setAll('monthsbox',true)">all</button><button class="linkbtn" onclick="setAll('monthsbox',false)">none</button></h3>
             <div class="scroll" id="monthsbox"></div>
             <label class="opt" style="margin-top:6px;"><input type="checkbox" id="aggmonth"> Aggregate months (combine selected into one total)</label>
-            <div class="mini" style="max-width:200px; margin-top:8px;">Check months for monthly data (bulanan); leave all unchecked for annual totals (tahunan). Months not yet released are skipped.</div>
-            <h3 style="margin-top:16px">Port (pelabuhan)</h3>
+          </div>
+          <p class="mini period-help">Leave every month unchecked for annual totals. Unreleased months are skipped automatically.</p>
+          </div>
+        </div>
+
+        <div class="query-step geography-step">
+          <div class="step-heading"><span>3</span><h2>Geography</h2></div>
+          <div class="step-content geo-grid">
+          <div>
+            <h3>Port</h3>
             <label class="opt"><input type="checkbox" id="incport" checked> Include port information</label>
             <select id="portsel" style="width:100%; margin-top:4px"><option value="">(all ports)</option></select>
-            <h3 style="margin-top:16px">Country (negara)</h3>
+          </div>
+          <div>
+            <h3>Country</h3>
             <label class="opt"><input type="checkbox" id="incctr" checked> Include country information</label>
             <select id="ctrsel" style="width:100%; margin-top:4px"><option value="">(all countries)</option></select>
-            <div class="mini" style="max-width:200px; margin-top:8px;">Untick port and/or country to aggregate values over them &mdash; untick country for world totals.</div>
           </div>
-          <div class="col" style="flex:1.2; min-width:320px;">
+          <p class="mini geo-help">Turn off a dimension to aggregate across it. Turn off country for world totals.</p>
+          </div>
+        </div>
+
+        <div class="query-step commodity-step">
+          <div class="step-heading"><span>4</span><h2>Commodity</h2></div>
+          <div class="step-content commodity-grid">
+          <div class="chapter-picker">
             <h3>HS chapters (2-digit)
               <button class="linkbtn" onclick="setAll('chapters',true)">all</button>
               <button class="linkbtn" onclick="setAll('chapters',false)">none</button>
-              <input type="text" id="hsfilter" placeholder="search..." style="margin-left:8px; padding:3px 8px; font-size:12px;" oninput="filterChapters()">
             </h3>
+            <input type="text" id="hsfilter" placeholder="Search by code or description" oninput="filterChapters()">
             <div class="scroll chapters" id="chapters" style="max-height: 180px;"></div>
+          </div>
+          <div>
+            <h3>Commodity level</h3>
             <div id="levelbox" style="margin-top:10px; margin-bottom:12px;">
-              <label class="opt" style="display:block; margin-bottom:3px;"><input type="radio" name="hslevel" value="2" checked> 2-digit (chapter totals)</label>
-              <label class="opt" style="display:block; margin-bottom:3px;"><input type="radio" name="hslevel" value="8"> 8-digit (every full HS code in ticked chapters)</label>
-              <label class="opt" style="display:block;"><input type="radio" name="hslevel" value="agg"> Aggregate (combine all selected HS into one total)</label>
+              <label class="opt level-option"><input type="radio" name="hslevel" value="2" checked><span><b>2-digit chapter</b><small>Chapter totals such as 01 or 02</small></span></label>
+              <label class="opt level-option"><input type="radio" name="hslevel" value="8"><span><b>Full HS code</b><small>Every full code in selected chapters</small></span></label>
+              <label class="opt level-option"><input type="radio" name="hslevel" value="agg"><span><b>Aggregate to chapter</b><small>Combine the selected HS codes</small></span></label>
             </div>
+          </div>
+          <div class="extra-codes">
             <h3 style="margin-top:12px">Extra full HS codes (optional)</h3>
-            <textarea id="fullhs" placeholder="e.g. 15111000 27011290  (space, comma or newline separated)"></textarea>
-            <div class="mini" style="margin-top:6px;">Must match BPS's HS master exactly: 8-digit for 2017+, 10-digit for 2014&ndash;2016. No 4/6-digit prefixes.</div>
+            <textarea id="fullhs" placeholder="Enter one code per line, e.g.&#10;15111000&#10;27011290"></textarea>
+            <div class="mini" style="margin-top:6px;">Use exact BPS codes: 8 digits for 2017+, usually 10 digits for 2014–2016.</div>
+            <div class="query-actions">
+              <button class="primary" id="go" onclick="fetchAll()">Fetch trade data</button>
+              <button class="ghost" id="cancel" onclick="cancelled=true" style="display:none">Cancel</button>
+            </div>
           </div>
         </div>
-        <div style="margin-top:16px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-          <button class="primary" id="go" onclick="fetchAll()">Fetch data</button>
-          <button class="ghost" id="cancel" onclick="cancelled=true" style="display:none">Cancel</button>
-          <span class="mini" id="progtext" style="font-weight: 700;"></span>
         </div>
-        <div id="bar"><div></div></div>
-        <div id="log" style="margin-top: 10px;"></div>
-      </div>
+        <div class="progress-row"><span>Progress</span><div id="bar"><div></div></div><span class="mini" id="progtext"></span></div>
+        <div id="log"></div>
+      </section>
 
       <!-- Results section -->
-      <div class="card" id="results" style="display:none">
+      <section class="results-panel" id="results" style="display:none">
         <div class="filters">
           <div class="f"><span class="statlab">Pelabuhan (port)</span><select id="fport" onchange="render()"></select></div>
           <div class="f"><span class="statlab">Negara (country)</span><select id="fctr" onchange="render()"></select></div>
@@ -291,12 +354,10 @@
           <button class="primary" onclick="downloadCSV()" style="margin-left: auto;">Download CSV</button>
         </div>
         <div id="stats"></div>
-        <div id="tablewrap"><table id="tbl"></table></div>
-        <div class="mini" id="tablenote" style="margin-top:6px"></div>
-      </div>
+      </section>
 
       <!-- Charts section -->
-      <div class="card viz" id="vizcard" style="display:none">
+      <section class="viz results-panel" id="vizcard" style="display:none">
         <div class="vizgrid">
           <div><h4 id="t_time"></h4><div id="c_time"></div></div>
           <div id="c_ctr_wrap"><h4>Top countries by value (US$)</h4><div id="c_ctr"></div></div>
@@ -304,10 +365,10 @@
           <div id="c_port_wrap"><h4>Top ports by value (US$)</h4><div id="c_port"></div></div>
         </div>
         <div class="mini" style="margin-top:12px;">Charts follow the filters above. Hover a bar for the exact value.</div>
-      </div>
+      </section>
 
       <!-- Map section -->
-      <div class="card" id="mapcard" style="display:none">
+      <section class="results-panel" id="mapcard" style="display:none">
         <div class="legend" style="flex-wrap: wrap; gap: 16px;">
           <b style="color:var(--navy)">Trade flow map</b>
           <span><span class="sw" style="background:#2a78d6"></span>export flows</span>
@@ -328,22 +389,28 @@
           </button>
         </div>
         <div class="mini" id="mapnote" style="margin-top:6px"></div>
-      </div>
+      </section>
+
+      <section class="results-panel table-panel" id="tablecard" style="display:none">
+        <div class="section-heading"><h2>Data preview</h2><span>First 1,000 filtered rows</span></div>
+        <div id="tablewrap"><table id="tbl"></table></div>
+        <div class="mini" id="tablenote" style="margin-top:6px"></div>
+      </section>
 
       <div id="tip"></div>
 
     </div>
   </main>
 
-  <footer style="text-align: center; padding: 32px 20px; color: var(--muted); font-size: 14px; font-weight: 600;">
-    BPS Trade &mdash; Built for practical trade-data research.
+  <footer>
+    BPS Trade · BPS data availability varies by release period. Use API data responsibly.
   </footer>
 
   <script>
     // Redirect to trailing slash on subdirectory hosting if visited without trailing slash
     // and not visiting a specific file like index.html.
     if (window.location.pathname !== '/' &&
-        !window.location.pathname.endsWith('/') && 
+        !window.location.pathname.endsWith('/') &&
         window.location.pathname.split('/').pop().indexOf('.') === -1) {
       window.location.replace(window.location.href + '/');
     }
@@ -359,9 +426,26 @@
       const key = localStorage.getItem('bps_api_key');
       const proxy = localStorage.getItem('bps_cors_proxy');
       if (key) document.getElementById('apikey').value = key;
-      if (proxy) document.getElementById('corsproxy').value = proxy;
+      if (proxy) {
+        document.getElementById('corsproxy').value = proxy;
+        document.getElementById('requestmode').value = proxy;
+      }
     }
     loadConfigs();
+
+    document.getElementById('save-key').addEventListener('click', () => {
+      saveApiKey(document.getElementById('apikey').value);
+      document.getElementById('save-key').textContent = 'Saved';
+      window.setTimeout(() => document.getElementById('save-key').textContent = 'Save locally', 1200);
+    });
+    document.getElementById('clear-key').addEventListener('click', () => {
+      document.getElementById('apikey').value = '';
+      localStorage.removeItem('bps_api_key');
+    });
+    document.getElementById('requestmode').addEventListener('change', event => {
+      document.getElementById('corsproxy').value = event.target.value;
+      saveCorsProxy(event.target.value);
+    });
 
     // Configuration Initialization with dynamic fallback
     let CFG;
@@ -433,7 +517,7 @@
     const isClientSideMode = !(CFG && CFG.isLocalServer);
 
     if (isClientSideMode) {
-      document.getElementById('client-config').style.display = 'block';
+      document.getElementById('client-config').style.display = 'grid';
     }
 
     let rows = [], cancelled = false, hasPort = true, hasCtr = true, hasHs = true, hasMonth = true;
@@ -456,6 +540,42 @@
     boxes('years', CFG.years.map(y=>[y, y]), 'year', true);
     boxes('monthsbox', CFG.months.map((m,i)=>[i+1, String(i+1).padStart(2,'0') + ' ' + m]), 'month', false);
     boxes('chapters', CFG.chapters.map(([c,d])=>[c, `[${c}] ${d}`]), 'hs', false);
+
+    function syncSummary(){
+      const flow = document.querySelector('input[name=flow]:checked');
+      const years = [...document.querySelectorAll('input[name=year]:checked')].map(x => x.value);
+      const months = [...document.querySelectorAll('input[name=month]:checked')].map(x => String(x.value).padStart(2, '0'));
+      const chapters = [...document.querySelectorAll('input[name=hs]:checked')].map(x => x.value);
+      el('summary-flow').textContent = flow ? (flow.value === 'export' ? 'Export' : 'Import') : '—';
+      el('summary-period').textContent = `${years.length ? years.join(', ') : 'No year'} · ${months.length ? months.join(', ') : 'annual'}`;
+      el('summary-geo').textContent = `${el('incport').checked ? (el('portsel').value || 'All ports') : 'Ports aggregated'} · ${el('incctr').checked ? (el('ctrsel').value || 'All countries') : 'World total'}`;
+      el('summary-commodity').textContent = chapters.length ? `HS ${chapters.slice(0,4).join(', ')}${chapters.length > 4 ? ' +' + (chapters.length - 4) : ''}` : 'Choose HS chapters';
+    }
+    document.addEventListener('change', event => {
+      if (event.target.closest && event.target.closest('#query-builder')) syncSummary();
+    });
+    syncSummary();
+
+    function showResultsLayout(){
+      el('query-builder').style.display = 'none';
+      el('client-config').style.display = 'none';
+      el('page-title').textContent = 'Trade dataset';
+      el('page-intro').textContent = 'Filter, compare, map, and download the BPS records returned by your query.';
+      el('rail-title').textContent = 'Dataset';
+      el('rail-intro').textContent = 'Current result dimensions and selections.';
+      el('edit-query').style.display = 'block';
+      window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+    el('edit-query').addEventListener('click', () => {
+      el('query-builder').style.display = '';
+      if (isClientSideMode) el('client-config').style.display = 'grid';
+      el('page-title').textContent = 'Build a trade dataset';
+      el('page-intro').textContent = 'Choose a flow, period, geography, and commodity. We’ll fetch matching BPS records and prepare them for analysis.';
+      el('rail-title').textContent = 'Your query';
+      el('rail-intro').textContent = 'Review the current selections before fetching data.';
+      el('edit-query').style.display = 'none';
+      el('query-builder').scrollIntoView({behavior: 'smooth', block: 'start'});
+    });
 
     // Client-Side Data Loading
     let GEO = null;
@@ -528,11 +648,9 @@
       const monthVal = month || 1;
       const codesStr = hsCodes.join(';');
       let url = `https://webapi.bps.go.id/v1/api/dataexim/sumber/${flowVal}/periode/${periode}/kodehs/${encodeURIComponent(codesStr)}/jenishs/${jenishs}/tahun/${year}/bulan/${monthVal}/key/${apiKey}`;
-      
-      if (corsProxy) {
-        url = corsProxy + url;
-      }
-      
+
+      if (corsProxy) url = corsProxy + encodeURIComponent(url);
+
       const response = await fetch(url);
       const d = await response.json();
       if (d.status === "Error") {
@@ -541,13 +659,13 @@
       if (d['data-availability'] !== 'available') {
         return [];
       }
-      
+
       const rows = [];
       const splitBracketed = (s) => {
         const m = (s || "").match(/^\[([^\]]*)\]\s*(.*)/);
         return m ? [m[1], m[2]] : ["", s || ""];
       };
-      
+
       for (const r of (d.data || [])) {
         const [hsCode, hsDesc] = splitBracketed(r.kodehs);
         const [monthId, monthName] = splitBracketed(r.bulan);
@@ -596,7 +714,7 @@
       if (!years.length) return el('log').textContent = 'Pick at least one year.';
       if (!chapters.length && !full.length) return el('log').textContent = 'Pick at least one HS chapter or enter a full HS code.';
       if (bad.length) return el('log').textContent = 'These do not look like HS codes: ' + bad.join(', ');
-      
+
       let apiKey = '';
       let corsProxy = '';
       if (isClientSideMode) {
@@ -613,7 +731,7 @@
       const jobs = [];
       if (chapters.length && (level === '2' || level === 'agg'))
         for (const b of chunk(chapters)) for (const y of years) for (const m of months) jobs.push({b, y, m});
-      
+
       if (chapters.length && level === '8') {
         const cache = {};
         for (const y of years) {
@@ -642,7 +760,7 @@
       rows = []; cancelled = false;
       el('go').disabled = true; el('cancel').style.display = '';
       el('bar').style.display = ''; el('bar').firstElementChild.style.width = '0%';
-      el('results').style.display = el('vizcard').style.display = el('mapcard').style.display = 'none';
+      el('results').style.display = el('vizcard').style.display = el('mapcard').style.display = el('tablecard').style.display = 'none';
 
       let done = 0, empty = 0;
       const run = async job => {
@@ -726,7 +844,8 @@
         (a.country || '').localeCompare(b.country || ''));
       if (rows.length) {
         buildFilters();
-        el('results').style.display = el('vizcard').style.display = el('mapcard').style.display = '';
+        el('results').style.display = el('vizcard').style.display = el('mapcard').style.display = el('tablecard').style.display = '';
+        showResultsLayout();
         render();
       }
     }
@@ -817,7 +936,7 @@
     }
 
     // ---------------------------------------------------------------- charts
-    const BLUE = '#2a78d6', ORANGE = '#eb6834', GRID = '#e1e0d9', AXIS = '#c3c2b7';
+    const BLUE = '#ff4d45', ORANGE = '#2a78d6', GRID = '#e1e8f1', AXIS = '#aebed2';
     const esc_ = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
     const fmtV = v => v >= 1e9 ? (v/1e9).toFixed(1)+'B' : v >= 1e6 ? (v/1e6).toFixed(1)+'M'
                   : v >= 1e3 ? (v/1e3).toFixed(0)+'K' : String(Math.round(v));
@@ -916,7 +1035,7 @@
       const isFS = wrapper.classList.toggle('fullscreen');
       el('fs-icon').textContent = isFS ? '✕' : '⛶';
       el('fs-text').textContent = isFS ? 'Close' : 'Fullscreen';
-      
+
       if (map) {
         setTimeout(() => {
           map.invalidateSize();
@@ -1034,6 +1153,37 @@
       a.download = `exim_${flow}_${span}.csv`;
       a.click();
       URL.revokeObjectURL(a.href);
+    }
+
+    // Local visual-QA state. It is only enabled with ?demo=1 and never affects normal use.
+    if (new URLSearchParams(location.search).get('demo') === '1') {
+      window.addEventListener('load', async () => {
+        await loadDropdowns();
+        const countries = ['CHINA', 'JAPAN', 'UNITED STATES', 'KOREA, REPUBLIC OF', 'NETHERLANDS'];
+        const ports = ['TANJUNG PRIOK', 'TANJUNG PERAK', 'BATAM ISLAND', 'MAKASSAR', 'BELAWAN'];
+        const commodities = [
+          ['03', 'Fish and crustaceans'],
+          ['15', 'Animal or vegetable fats and oils'],
+          ['27', 'Mineral fuels and oils'],
+          ['44', 'Wood and articles of wood'],
+          ['85', 'Electrical machinery and equipment']
+        ];
+        rows = [];
+        for (const year of [2023, 2024]) for (let month = 1; month <= 12; month++) {
+          countries.forEach((country, index) => rows.push({
+            flow: 'export', year, month_id: String(month).padStart(2, '0'), month: CFG.months[month - 1],
+            hs_code: commodities[index][0], hs_desc: commodities[index][1], port: ports[index], country,
+            value_usd: (14 - index * 1.7) * 10000000 + month * 1250000 + (year - 2023) * 9500000,
+            netweight_kg: (22 - index * 2.1) * 10000000 + month * 850000
+          }));
+        }
+        buildFilters();
+        el('results').style.display = el('vizcard').style.display = el('mapcard').style.display = el('tablecard').style.display = '';
+        el('summary-period').textContent = '2023–2024 · monthly';
+        el('summary-commodity').textContent = 'HS 03, 15, 27, 44, 85';
+        showResultsLayout();
+        render();
+      });
     }
   </script>
 </body>
