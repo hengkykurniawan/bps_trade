@@ -44,6 +44,20 @@ nav a::before {
   background: currentColor;
   clip-path: polygon(15% 0, 85% 0, 100% 15%, 100% 85%, 85% 100%, 15% 100%, 0 85%, 0 15%, 22% 15%, 22% 60%, 38% 60%, 38% 40%, 62% 40%, 62% 60%, 78% 60%, 78% 15%, 15% 15%, 15% 85%, 85% 85%, 85% 15%);
 }
+.header-right { gap: 3px; }
+.latest-top {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  max-width: 310px;
+  padding: 4px 8px;
+  border-right: 2px solid var(--coral);
+  border-radius: 4px 0 0 4px;
+  background: var(--sea-50);
+  color: var(--ink);
+  line-height: 1.25;
+}
+.latest-top > span:first-child { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .45px; }
 
 .app-shell {
   display: grid;
@@ -256,6 +270,7 @@ footer { padding: 18px 40px 24px 300px; color: var(--muted); font-size: 11px; te
 @media (max-width: 520px) {
   .brand { font-size: 20px; }
   .ship { width: 46px; }
+  .latest-top { max-width: 175px; }
   .workspace-heading h1 { font-size: 30px; }
   .segmented { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
   .segmented span { min-width: 0; }
