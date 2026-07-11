@@ -16,7 +16,7 @@
 }
 
 * { box-sizing: border-box; }
-body { margin: 0; min-width: 320px; background: var(--white); color: var(--ink); }
+body { margin: 0; min-width: 0; width: 100%; max-width: 100%; overflow-x: hidden; background: var(--white); color: var(--ink); }
 body::before {
   content: "";
   position: fixed;
@@ -64,6 +64,7 @@ nav a::before {
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr);
   width: 100%;
+  max-width: 100%;
   min-height: calc(100vh - 70px);
 }
 
@@ -103,7 +104,7 @@ nav a::before {
 .rail-steps div span { display: block; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .rail-edit { display: none; width: 100%; border: 1px solid var(--ink); background: transparent; color: var(--ink); }
 
-.workspace { min-width: 0; padding: 18px 40px 0; }
+.workspace { min-width: 0; width: 100%; max-width: 100%; overflow-x: hidden; padding: 18px 40px 0; }
 .workspace-heading { display: flex; justify-content: space-between; align-items: end; margin: 0 0 12px; }
 .workspace-heading h1 { margin: 0 0 4px; font-size: clamp(30px, 2.6vw, 44px); line-height: 1.08; letter-spacing: -1.35px; }
 .workspace-heading p { margin: 0; color: var(--ink-soft); font-size: 14px; line-height: 1.55; }
@@ -192,7 +193,7 @@ h3 { margin: 0 0 8px; color: var(--ink-soft); font-size: 11px; letter-spacing: .
 .opt { color: var(--ink-soft); font-size: 12px; }
 
 .geo-grid { display: grid; grid-template-columns: repeat(2, minmax(220px, 1fr)); gap: 18px; }
-.commodity-grid { display: grid; grid-template-columns: minmax(310px, 1.05fr) minmax(230px,.8fr) minmax(260px,.9fr); gap: 22px; }
+.commodity-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .8fr) minmax(0, .9fr); gap: 22px; }
 .chapter-picker #hsfilter { width: 100%; margin: 0 0 6px; }
 .chapters { min-width: 0; display: block; columns: 1; max-height: 170px !important; }
 .chapters label.opt { font-size: 11.5px; padding: 5px 0; border-bottom: 1px solid var(--rule-soft); white-space: normal; }
@@ -212,18 +213,18 @@ h3 { margin: 0 0 8px; color: var(--ink-soft); font-size: 11px; letter-spacing: .
 .filters { padding: 14px; background: var(--sea-50); border: 1px solid var(--rule); border-radius: 6px; }
 .filters .f { flex: 1; min-width: 160px; }
 .filters select, .filters input[type=text] { width: 100%; min-width: 0; }
-#stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; margin: 24px 0 14px; }
+#stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin: 24px 0 14px; }
 #stats > span { padding: 0 30px; border-right: 1px solid var(--rule); }
 #stats > span:first-child { padding-left: 0; }
 #stats > span:last-child { border-right: 0; }
-#stats b { display: block; margin-top: 5px; color: var(--ink); font-size: 31px; letter-spacing: -.7px; }
+#stats b { display: block; margin-top: 5px; color: var(--ink); font-size: clamp(18px, 2.2vw, 31px); letter-spacing: -.7px; white-space: nowrap; }
 .statlab { color: var(--muted); font-size: 10px; }
 .vizgrid { grid-template-columns: 1.55fr repeat(2, minmax(0, 1fr)); gap: 18px; }
 .vizgrid > div { padding: 8px 0 16px; border-bottom: 1px solid var(--rule-soft); }
 .vizgrid #c_port_wrap { display: none !important; }
 .viz h4 { color: var(--ink); }
 #map { height: 660px; border-radius: 6px; border-color: var(--rule); }
-#tablewrap { border-radius: 6px; border-color: var(--rule); }
+#tablewrap { width: 100%; max-width: 100%; overflow-x: auto; border-radius: 6px; border-color: var(--rule); }
 .section-heading { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
 .section-heading h2 { margin: 0; font-size: 18px; }
 .section-heading span { color: var(--muted); font-size: 11px; }
@@ -238,6 +239,10 @@ footer { padding: 18px 40px 24px 300px; color: var(--muted); font-size: 11px; te
   .query-step { grid-template-columns: 150px minmax(0, 1fr); }
   .commodity-grid { grid-template-columns: 1fr 1fr; }
   .extra-codes { grid-column: 1 / -1; }
+}
+
+@media (min-width: 861px) and (max-width: 1080px) {
+  .period-grid, .geo-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (max-width: 860px) {
@@ -259,6 +264,7 @@ footer { padding: 18px 40px 24px 300px; color: var(--muted); font-size: 11px; te
   .vizgrid { grid-template-columns: 1fr; }
   #stats { grid-template-columns: 1fr; gap: 14px; }
   #stats > span { padding: 0 0 14px; border-right: 0; border-bottom: 1px solid var(--rule); }
+  #stats b { font-size: 28px; }
   footer { padding: 18px 20px 24px; }
 }
 
