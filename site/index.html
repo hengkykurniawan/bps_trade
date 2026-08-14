@@ -194,7 +194,7 @@
       .chapters { grid-template-columns: minmax(0, 1fr); }
     }
   </style>
-  <link rel="stylesheet" href="site.css?v=20260814-7">
+  <link rel="stylesheet" href="site.css?v=20260814-8">
 </head>
 <body>
   <header>
@@ -203,6 +203,10 @@
         <svg class="ship" viewBox="0 0 64 48" aria-hidden="true"><path fill="currentColor" d="M11 12h12V2h9v10h7V7h10v5h7v15H11z"/><path fill="#e71d2b" d="M39 7h10v9H39zm12 5h5v9h-5z"/><path fill="currentColor" d="M4 25h56l-7 11H15zM2 38c6 0 6 4 12 4s6-4 12-4 6 4 12 4 6-4 12-4 6 4 12 4v4c-6 0-6-4-12-4s-6 4-12 4-6-4-12-4-6 4-12 4-6-4-12-4z"/></svg>
         <span>BPS <strong>Trade</strong></span>
       </a>
+      <nav class="section-tabs" aria-label="BPS Trade sections" role="tablist">
+        <button class="section-tab active" id="trade-tab" type="button" role="tab" aria-selected="true" aria-controls="trade-view">Trade data</button>
+        <button class="section-tab" id="master-tab" type="button" role="tab" aria-selected="false" aria-controls="hs-master-panel">HS Code Master</button>
+      </nav>
       <div class="header-copy">
         <h1 id="page-title">Build a trade dataset</h1>
         <p id="page-intro">Choose a flow, period, geography, and commodity. We’ll fetch matching BPS records and prepare them for analysis.</p>
@@ -244,6 +248,7 @@
     </aside>
 
     <div class="workspace">
+      <div id="trade-view" role="tabpanel" aria-labelledby="trade-tab">
       <section id="client-config" class="config-band api-panel" hidden>
         <div class="api-panel-copy">
           <strong>Connect this dashboard to BPS WebAPI</strong>
@@ -420,6 +425,45 @@
         <div class="section-heading"><h2>Data preview</h2><span>First 1,000 filtered rows</span></div>
         <div id="tablewrap"><table id="tbl"></table></div>
         <div class="mini" id="tablenote" style="margin-top:6px"></div>
+      </section>
+      </div>
+
+      <section class="hs-master-panel" id="hs-master-panel" role="tabpanel" aria-labelledby="master-tab" hidden>
+        <div class="master-hero">
+          <div>
+            <span class="master-kicker">BPS classification reference</span>
+            <h2>HS Code Master</h2>
+            <p>Search the official code descriptions for each historical BPS classification period. Choose the version that matches the year of your trade data.</p>
+          </div>
+          <a class="master-source" href="hs_master.pdf" target="_blank" rel="noopener">
+            <strong>Open source PDF</strong>
+            <span>BPS compilation · 1,262 pages ↗</span>
+          </a>
+        </div>
+
+        <div class="master-version-strip" id="hs-master-versions" role="tablist" aria-label="HS Code Master version">
+          <button class="master-version" type="button" role="tab" data-era="1999" aria-selected="false"><strong>1999–2008</strong><span>Loading…</span></button>
+          <button class="master-version" type="button" role="tab" data-era="2009" aria-selected="false"><strong>2009–2011</strong><span>Loading…</span></button>
+          <button class="master-version" type="button" role="tab" data-era="2012" aria-selected="false"><strong>2012–2016</strong><span>Loading…</span></button>
+          <button class="master-version" type="button" role="tab" data-era="2017" aria-selected="false"><strong>2017–2021</strong><span>Loading…</span></button>
+          <button class="master-version active" type="button" role="tab" data-era="2022" aria-selected="true"><strong>2022–now</strong><span>Loading…</span></button>
+        </div>
+
+        <div class="master-toolbar">
+          <label for="hs-master-search"><span>Search code or description</span><input id="hs-master-search" type="text" placeholder="Try 01012900, coffee, machinery…" autocomplete="off"></label>
+          <p class="master-summary" id="hs-master-summary" aria-live="polite">Loading HS Code Master…</p>
+        </div>
+
+        <div class="master-table-wrap">
+          <table class="master-table">
+            <thead><tr><th>HS code</th><th>Description</th></tr></thead>
+            <tbody id="hs-master-rows"></tbody>
+          </table>
+        </div>
+        <div class="master-footer">
+          <p>Source: BPS HS Code Master, compiled in 2024. Descriptions are reproduced from the supplied reference file.</p>
+          <button class="ghost" id="hs-master-more" type="button" hidden>Show 250 more</button>
+        </div>
       </section>
 
       <div id="tip"></div>
@@ -826,12 +870,16 @@
     async function ensureMaster() {
       if (MASTER) return;
       const res = await fetch('hs_master.json');
+      if (!res.ok) throw new Error(`HS Code Master could not be loaded (${res.status}).`);
       MASTER = await res.json();
     }
 
     function eraForYear(year) {
       const y = parseInt(year);
-      return y <= 2016 ? "2012" : (y <= 2021 ? "2017" : "2022");
+      if (y <= 2008) return "1999";
+      if (y <= 2011) return "2009";
+      if (y <= 2016) return "2012";
+      return y <= 2021 ? "2017" : "2022";
     }
 
     async function expandChapters(year, chapters) {
@@ -841,6 +889,126 @@
       const list = MASTER[era] || [];
       return list.filter(item => want.has(item[0].substring(0, 2))).map(item => item[0]);
     }
+
+    const HS_MASTER_ERAS = [
+      {key: '1999', label: '1999–2008'},
+      {key: '2009', label: '2009–2011'},
+      {key: '2012', label: '2012–2016'},
+      {key: '2017', label: '2017–2021'},
+      {key: '2022', label: '2022–now'}
+    ];
+    const HS_MASTER_PAGE_SIZE = 250;
+    let hsMasterEra = '2022';
+    let hsMasterMatches = [];
+    let hsMasterVisible = HS_MASTER_PAGE_SIZE;
+
+    function hsMasterMeta(key){
+      return HS_MASTER_ERAS.find(item => item.key === key) || HS_MASTER_ERAS[HS_MASTER_ERAS.length - 1];
+    }
+
+    function renderHsMasterVersionCounts(){
+      document.querySelectorAll('.master-version').forEach(button => {
+        const rows = MASTER[button.dataset.era] || [];
+        button.querySelector('span').textContent = `${rows.length.toLocaleString()} codes`;
+      });
+    }
+
+    function renderHsMasterRows(){
+      const body = el('hs-master-rows');
+      const meta = hsMasterMeta(hsMasterEra);
+      const visibleRows = hsMasterMatches.slice(0, hsMasterVisible);
+      if (!visibleRows.length) {
+        body.innerHTML = '<tr><td class="master-empty" colspan="2">No codes match this search in the selected version.</td></tr>';
+      } else {
+        body.innerHTML = visibleRows.map(([code, description]) =>
+          `<tr><td>${escapeCommodityText(code)}</td><td>${escapeCommodityText(description)}</td></tr>`
+        ).join('');
+      }
+      const query = el('hs-master-search').value.trim();
+      const total = (MASTER[hsMasterEra] || []).length;
+      el('hs-master-summary').textContent = query
+        ? `${hsMasterMatches.length.toLocaleString()} matches in ${meta.label} · showing ${visibleRows.length.toLocaleString()}`
+        : `${total.toLocaleString()} codes in ${meta.label} · showing ${visibleRows.length.toLocaleString()}`;
+      const more = el('hs-master-more');
+      more.hidden = hsMasterVisible >= hsMasterMatches.length;
+      more.textContent = `Show ${Math.min(HS_MASTER_PAGE_SIZE, Math.max(0, hsMasterMatches.length - hsMasterVisible)).toLocaleString()} more`;
+    }
+
+    function filterHsMaster(reset = true){
+      const terms = el('hs-master-search').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+      const rows = MASTER[hsMasterEra] || [];
+      hsMasterMatches = terms.length
+        ? rows.filter(([code, description]) => {
+            const haystack = `${code} ${description}`.toLowerCase();
+            return terms.every(term => haystack.includes(term));
+          })
+        : rows;
+      if (reset) hsMasterVisible = Math.min(HS_MASTER_PAGE_SIZE, hsMasterMatches.length);
+      renderHsMasterRows();
+      el('hs-master-panel').querySelector('.master-table-wrap').scrollTop = 0;
+    }
+
+    function setHsMasterEra(key){
+      if (!HS_MASTER_ERAS.some(item => item.key === key)) return;
+      hsMasterEra = key;
+      document.querySelectorAll('.master-version').forEach(button => {
+        const active = button.dataset.era === key;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-selected', String(active));
+      });
+      filterHsMaster(true);
+    }
+
+    async function prepareHsMaster(){
+      el('hs-master-summary').textContent = 'Loading HS Code Master…';
+      try {
+        await ensureMaster();
+        renderHsMasterVersionCounts();
+        setHsMasterEra(hsMasterEra);
+      } catch (error) {
+        el('hs-master-summary').textContent = 'HS Code Master is unavailable.';
+        el('hs-master-rows').innerHTML = `<tr><td class="master-empty" colspan="2">${escapeCommodityText(error.message || error)}</td></tr>`;
+      }
+    }
+
+    function switchSection(section){
+      const showMaster = section === 'master';
+      el('trade-view').hidden = showMaster;
+      el('hs-master-panel').hidden = !showMaster;
+      document.querySelector('.app-shell').classList.toggle('master-mode', showMaster);
+      document.querySelector('.header-right').hidden = showMaster;
+      el('trade-tab').classList.toggle('active', !showMaster);
+      el('master-tab').classList.toggle('active', showMaster);
+      el('trade-tab').setAttribute('aria-selected', String(!showMaster));
+      el('master-tab').setAttribute('aria-selected', String(showMaster));
+      if (showMaster) {
+        el('page-title').textContent = 'HS Code Master';
+        el('page-intro').textContent = 'Search BPS classification versions from 1999 to the current release.';
+        prepareHsMaster();
+      } else {
+        const showingResults = el('query-builder').style.display === 'none';
+        el('page-title').textContent = showingResults ? 'Trade dataset' : 'Build a trade dataset';
+        el('page-intro').textContent = showingResults
+          ? 'Filter, compare, map, and download the BPS records returned by your query.'
+          : 'Choose a flow, period, geography, and commodity. We’ll fetch matching BPS records and prepare them for analysis.';
+      }
+      history.replaceState(null, '', showMaster ? '#hs-master' : '#trade');
+      window.scrollTo({top: 0, behavior: 'auto'});
+    }
+
+    el('trade-tab').addEventListener('click', () => switchSection('trade'));
+    el('master-tab').addEventListener('click', () => switchSection('master'));
+    document.querySelector('.brand').addEventListener('click', event => {
+      event.preventDefault();
+      switchSection('trade');
+    });
+    document.querySelectorAll('.master-version').forEach(button => button.addEventListener('click', () => setHsMasterEra(button.dataset.era)));
+    el('hs-master-search').addEventListener('input', () => filterHsMaster(true));
+    el('hs-master-more').addEventListener('click', () => {
+      hsMasterVisible = Math.min(hsMasterVisible + HS_MASTER_PAGE_SIZE, hsMasterMatches.length);
+      renderHsMasterRows();
+    });
+    if (location.hash === '#hs-master') switchSection('master');
 
     // Direct BPS API call in Client-Side Mode
     async function fetchEximDirect(flow, hsCodes, year, month, apiKey, corsProxy = '') {

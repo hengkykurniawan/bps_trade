@@ -77,7 +77,10 @@ function filterChapters() {
 
 function eraForYear(y) {
   y = Number(y);
-  return y <= 2016 ? '2012' : (y <= 2021 ? '2017' : '2022');
+  if (y <= 2008) return '1999';
+  if (y <= 2011) return '2009';
+  if (y <= 2016) return '2012';
+  return y <= 2021 ? '2017' : '2022';
 }
 
 function expandChapters(year, chapters) {
