@@ -218,6 +218,11 @@ h3 { margin: 0 0 8px; color: var(--ink-soft); font-size: 11px; letter-spacing: .
 .balance-key span { display: inline-flex; align-items: center; gap: 5px; }
 .balance-key span[hidden] { display: none; }
 .balance-key i { width: 12px; height: 5px; border-radius: 2px; }
+.chart-legend { display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 7px 14px; margin: 0 0 8px; color: var(--muted); font-size: 11px; }
+.chart-legend b { color: var(--ink-soft); font-size: 11px; }
+.chart-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.chart-legend span[hidden] { display: none; }
+.chart-legend i { width: 12px; height: 5px; border-radius: 2px; }
 .key-export { background: #2a78d6; }
 .key-import { background: #eb6834; }
 .key-surplus { background: #168a67; }
@@ -257,6 +262,7 @@ footer { padding: 18px 40px 24px 300px; color: var(--muted); font-size: 11px; te
   .extra-codes { grid-column: 1 / -1; }
   .balance-view { grid-template-columns: 1fr auto; }
   .balance-key { grid-column: 1 / -1; justify-content: flex-start; }
+  .chart-legend { justify-content: flex-start; }
 }
 
 @media (min-width: 861px) and (max-width: 1080px) {

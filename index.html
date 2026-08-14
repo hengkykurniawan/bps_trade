@@ -374,6 +374,13 @@
 
       <!-- Charts section -->
       <section class="viz results-panel" id="vizcard" style="display:none">
+        <div class="chart-legend" id="chart-legend" aria-label="Chart color legend">
+          <b>Chart colors</b>
+          <span id="chart-export-key"><i class="key-export"></i>Export</span>
+          <span id="chart-import-key"><i class="key-import"></i>Import</span>
+          <span id="chart-surplus-key"><i class="key-surplus"></i>Surplus</span>
+          <span id="chart-deficit-key"><i class="key-deficit"></i>Deficit</span>
+        </div>
         <div class="vizgrid">
           <div><h4 id="t_time"></h4><div id="c_time"></div></div>
           <div id="c_ctr_wrap"><h4 id="t_ctr">Top countries by value (US$)</h4><div id="c_ctr"></div></div>
@@ -556,6 +563,10 @@
       el('map-deficit-key').hidden = !isBalance || compare;
       document.querySelectorAll('.key-export,.key-import').forEach(k => k.closest('span').hidden = isBalance && !compare);
       document.querySelectorAll('.key-surplus,.key-deficit').forEach(k => k.closest('span').hidden = !isBalance || compare);
+      el('chart-export-key').hidden = isBalance ? !compare : selectedFlow !== 'export';
+      el('chart-import-key').hidden = isBalance ? !compare : selectedFlow !== 'import';
+      el('chart-surplus-key').hidden = !isBalance || compare;
+      el('chart-deficit-key').hidden = !isBalance || compare;
     }
 
     function showLatest(latest){
