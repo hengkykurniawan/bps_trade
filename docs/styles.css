@@ -197,9 +197,12 @@ button.linkbtn { min-height: 0; color: var(--coral-dark); font-size: 11px; }
 .segmented input:checked + span { border-color: var(--coral); background: #fff4f3; color: var(--coral-dark); }
 
 h3 { margin: 0 0 8px; color: var(--ink-soft); font-size: 11px; letter-spacing: .55px; }
-.period-grid { display: grid; grid-template-columns: minmax(180px,.6fr) minmax(320px,1.25fr); gap: 16px; }
-.period-grid .scroll { max-height: 78px; display: grid; grid-template-columns: repeat(4, minmax(52px, 1fr)); gap: 0 10px; }
-.period-grid #monthsbox { grid-template-columns: repeat(6, minmax(78px, 1fr)); }
+.period-grid { display: grid; grid-template-columns: minmax(140px,.35fr) minmax(400px,1.65fr); gap: 16px; }
+.period-grid .scroll { height: 112px; max-height: 112px; display: grid; gap: 0 6px; }
+.period-grid #years { grid-template-columns: repeat(2, minmax(58px, 1fr)); }
+.period-grid #monthsbox { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.period-grid label.opt { gap: 5px; }
+.period-grid #monthsbox label.opt { font-size: 11px; white-space: nowrap; }
 .period-help, .geo-help { grid-column: 1 / -1; margin: 0; }
 .scroll { border-radius: 6px; background: var(--sea-25); border-color: var(--rule); }
 .opt { color: var(--ink-soft); font-size: 12px; }
