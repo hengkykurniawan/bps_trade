@@ -194,7 +194,7 @@
       .chapters { grid-template-columns: minmax(0, 1fr); }
     }
   </style>
-  <link rel="stylesheet" href="styles.css?v=20260814-5">
+  <link rel="stylesheet" href="styles.css?v=20260814-6">
 </head>
 <body>
   <header>
@@ -313,18 +313,19 @@
           <div class="step-heading"><span>4</span><h2>Commodity</h2></div>
           <div class="step-content commodity-grid">
           <div class="chapter-picker">
-            <h3>HS chapters (2-digit)
+            <h3><span id="commodity-list-title">HS chapters (2-digit)</span>
               <button class="linkbtn" onclick="setAll('chapters',true)">all</button>
               <button class="linkbtn" onclick="setAll('chapters',false)">none</button>
             </h3>
             <input type="text" id="hsfilter" placeholder="Search by code or description" oninput="filterChapters()">
-            <div class="scroll chapters" id="chapters" style="max-height: 180px;"></div>
+            <div class="mini commodity-list-note" id="commodity-list-note">All HS chapters are listed below. Scroll to see the complete list.</div>
+            <div class="scroll chapters" id="chapters" data-mode="chapter" aria-label="HS chapters"></div>
           </div>
           <div>
             <h3>Commodity level</h3>
             <div id="levelbox" style="margin-top:10px; margin-bottom:12px;">
               <label class="opt level-option"><input type="radio" name="hslevel" value="2" checked><span><b>2-digit chapter</b><small>Chapter totals such as 01 or 02</small></span></label>
-              <label class="opt level-option"><input type="radio" name="hslevel" value="8"><span><b>Full HS code</b><small>Every full code in selected chapters</small></span></label>
+              <label class="opt level-option"><input type="radio" name="hslevel" value="8"><span><b>Full HS code</b><small>Choose exact codes from the complete list</small></span></label>
               <label class="opt level-option"><input type="radio" name="hslevel" value="agg"><span><b>Aggregate to chapter</b><small>Combine the selected HS codes</small></span></label>
             </div>
           </div>
@@ -661,20 +662,99 @@
     }
     boxes('years', CFG.years.map(y=>[y, y]), 'year', true);
     boxes('monthsbox', CFG.months.map((m,i)=>[i+1, String(i+1).padStart(2,'0') + ' ' + m]), 'month', false);
-    boxes('chapters', CFG.chapters.map(([c,d])=>[c, `[${c}] ${d}`]), 'hs', false);
+
+    const commoditySelections = { chapter: new Set(), full: new Set() };
+    let commodityRenderToken = 0;
+
+    function escapeCommodityText(value){
+      return String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    }
+
+    function rememberCommoditySelections(){
+      const mode = el('chapters').dataset.mode || 'chapter';
+      commoditySelections[mode] = new Set([...el('chapters').querySelectorAll('input[name=hs]:checked')].map(input => input.value));
+    }
+
+    function selectedCommodityEras(){
+      const years = [...document.querySelectorAll('input[name=year]:checked')].map(input => input.value);
+      const relevantYears = years.length ? years : [CFG.years[0] || new Date().getFullYear()];
+      return [...new Set(relevantYears.map(eraForYear))];
+    }
+
+    function renderCommodityItems(items, mode, ariaLabel){
+      const selected = commoditySelections[mode];
+      el('chapters').dataset.mode = mode;
+      el('chapters').setAttribute('aria-label', ariaLabel);
+      el('chapters').innerHTML = items.map(([code, description]) =>
+        `<label class="opt"><input type="checkbox" name="hs" value="${code}" ${selected.has(code) ? 'checked' : ''}> [${code}] ${escapeCommodityText(description)}</label>`
+      ).join('');
+      el('chapters').scrollTop = 0;
+    }
+
+    async function renderCommodityPicker(){
+      rememberCommoditySelections();
+      const level = document.querySelector('input[name=hslevel]:checked').value;
+      const fullMode = level === '8';
+      const token = ++commodityRenderToken;
+      el('hsfilter').value = '';
+
+      if (!fullMode) {
+        el('commodity-list-title').textContent = 'HS chapters (2-digit)';
+        el('hsfilter').placeholder = 'Search chapter code or description';
+        const note = `${CFG.chapters.length.toLocaleString()} HS chapters. Scroll to see the complete list.`;
+        el('commodity-list-note').textContent = note;
+        el('commodity-list-note').dataset.base = note;
+        renderCommodityItems(CFG.chapters, 'chapter', 'HS chapters');
+        syncSummary();
+        return;
+      }
+
+      el('commodity-list-title').textContent = 'Full HS codes';
+      el('hsfilter').placeholder = 'Search full HS code or description';
+      el('commodity-list-note').textContent = 'Loading the complete full-code list…';
+      el('chapters').dataset.mode = 'full';
+      el('chapters').setAttribute('aria-label', 'Full HS codes');
+      el('chapters').innerHTML = '<div class="mini">Loading HS codes…</div>';
+      try {
+        await ensureMaster();
+        if (token !== commodityRenderToken) return;
+        const eras = selectedCommodityEras();
+        const codes = new Map();
+        eras.forEach(era => (MASTER[era] || []).forEach(([code, description]) => {
+          if (!codes.has(code)) codes.set(code, description);
+        }));
+        const items = [...codes.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+        const note = `${items.length.toLocaleString()} full HS codes for the selected year classification${eras.length > 1 ? 's' : ''} (${eras.join(', ')}). Scroll to see the complete list.`;
+        el('commodity-list-note').textContent = note;
+        el('commodity-list-note').dataset.base = note;
+        renderCommodityItems(items, 'full', 'Full HS codes');
+        syncSummary();
+      } catch (error) {
+        el('commodity-list-note').textContent = 'The full HS code list could not be loaded.';
+        el('chapters').innerHTML = `<div class="mini">${escapeCommodityText(error.message || error)}</div>`;
+      }
+    }
+
+    renderCommodityPicker();
 
     function syncSummary(){
       const flow = document.querySelector('input[name=flow]:checked');
       const years = [...document.querySelectorAll('input[name=year]:checked')].map(x => x.value);
       const months = [...document.querySelectorAll('input[name=month]:checked')].map(x => String(x.value).padStart(2, '0'));
-      const chapters = [...document.querySelectorAll('input[name=hs]:checked')].map(x => x.value);
+      const commodityCodes = [...document.querySelectorAll('input[name=hs]:checked')].map(x => x.value);
+      const fullMode = document.querySelector('input[name=hslevel]:checked').value === '8';
       el('summary-flow').textContent = flow ? flowLabel(flow.value) : '—';
       el('summary-period').textContent = `${years.length ? years.join(', ') : 'No year'} · ${months.length ? months.join(', ') : 'annual'}`;
       el('summary-geo').textContent = `${el('incport').checked ? (el('portsel').value || 'All ports') : 'Ports aggregated'} · ${el('incctr').checked ? (el('ctrsel').value || 'All countries') : 'World total'}`;
-      el('summary-commodity').textContent = chapters.length ? `HS ${chapters.slice(0,4).join(', ')}${chapters.length > 4 ? ' +' + (chapters.length - 4) : ''}` : 'Choose HS chapters';
+      el('summary-commodity').textContent = commodityCodes.length ? `HS ${commodityCodes.slice(0,4).join(', ')}${commodityCodes.length > 4 ? ' +' + (commodityCodes.length - 4) : ''}` : (fullMode ? 'Choose full HS codes' : 'Choose HS chapters');
     }
     document.addEventListener('change', event => {
-      if (event.target.closest && event.target.closest('#query-builder')) syncSummary();
+      if (event.target.name === 'hslevel' || (event.target.name === 'year' && document.querySelector('input[name=hslevel]:checked').value === '8')) {
+        renderCommodityPicker();
+      } else if (event.target.closest && event.target.closest('#query-builder')) {
+        rememberCommoditySelections();
+        syncSummary();
+      }
     });
     syncSummary();
 
@@ -813,12 +893,21 @@
       el(container).querySelectorAll('input[type=checkbox]').forEach(b => {
         if (b.closest('label').style.display !== 'none') b.checked = on;
       });
+      rememberCommoditySelections();
+      syncSummary();
     }
     function filterChapters(){
-      const q = el('hsfilter').value.toLowerCase();
-      el('chapters').querySelectorAll('label').forEach(l => {
-        l.style.display = l.textContent.toLowerCase().includes(q) ? '' : 'none';
+      const q = el('hsfilter').value.trim().toLowerCase();
+      const labels = [...el('chapters').querySelectorAll('label')];
+      let visible = 0;
+      labels.forEach(label => {
+        const matches = label.textContent.toLowerCase().includes(q);
+        label.style.display = matches ? '' : 'none';
+        if (matches) visible++;
       });
+      const note = el('commodity-list-note');
+      note.textContent = q ? `${visible.toLocaleString()} of ${labels.length.toLocaleString()} codes match “${el('hsfilter').value.trim()}”.` : note.dataset.base;
+      el('chapters').scrollTop = 0;
     }
     function picked(name){
       return [...document.querySelectorAll(`input[name=${name}]:checked`)].map(b => b.value);
@@ -860,7 +949,7 @@
       const requestFlows = flow === 'balance' ? ['export', 'import'] : [flow];
       const years = picked('year');
       const months = picked('month').length ? picked('month') : [''];
-      const chapters = picked('hs');
+      const commodityCodes = picked('hs');
       const full = el('fullhs').value.split(/[\s,;]+/).filter(Boolean);
       const bad = full.filter(c => !/^\d{3,10}$/.test(c));
 
@@ -868,7 +957,7 @@
 
       el('log').textContent = '';
       if (!years.length) return el('log').textContent = 'Pick at least one year.';
-      if (!chapters.length && !full.length) return el('log').textContent = 'Pick at least one HS chapter or enter a full HS code.';
+      if (!commodityCodes.length && !full.length) return el('log').textContent = level === '8' ? 'Pick at least one full HS code.' : 'Pick at least one HS chapter or enter a full HS code.';
       if (bad.length) return el('log').textContent = 'These do not look like HS codes: ' + bad.join(', ');
 
       let apiKey = '';
@@ -882,35 +971,22 @@
         }
       }
 
-      if (level === '8' && chapters.length && !CFG.hasMaster)
-        return el('log').textContent = 'hs_master.json is missing next to the app - 8-digit expansion unavailable.';
-
       // BPS API rejects requests with > 20 HS codes
       const chunk = arr => Array.from({length: Math.ceil(arr.length/20)}, (_, i) => arr.slice(i*20, i*20+20));
       const jobs = [];
-      if (chapters.length && (level === '2' || level === 'agg'))
-        for (const b of chunk(chapters)) for (const y of years) for (const m of months) jobs.push({b, y, m});
+      if (commodityCodes.length && (level === '2' || level === 'agg'))
+        for (const b of chunk(commodityCodes)) for (const y of years) for (const m of months) jobs.push({b, y, m});
 
-      if (chapters.length && level === '8') {
-        const cache = {};
+      if (commodityCodes.length && level === '8') {
+        try {
+          await ensureMaster();
+        } catch (error) {
+          return el('log').textContent = 'Error loading HS master: ' + error.message;
+        }
         for (const y of years) {
-          if (!(y in cache)) {
-            let codes;
-            if (isClientSideMode) {
-              try {
-                codes = await expandChapters(y, chapters);
-              } catch(e) {
-                return el('log').textContent = 'Error loading HS master: ' + e.message;
-              }
-            } else {
-              const r = await fetch(`/api/expand?year=${y}&chapters=${chapters.join(';')}`);
-              const d = await r.json();
-              if (d.error) return el('log').textContent = 'Error expanding chapters: ' + d.error;
-              codes = d.codes;
-            }
-            cache[y] = codes;
-          }
-          for (const b of chunk(cache[y])) for (const m of months) jobs.push({b, y, m});
+          const validCodes = new Set((MASTER[eraForYear(y)] || []).map(item => item[0]));
+          const codesForYear = commodityCodes.filter(code => validCodes.has(code));
+          for (const b of chunk(codesForYear)) for (const m of months) jobs.push({b, y, m});
         }
       }
       if (full.length)
