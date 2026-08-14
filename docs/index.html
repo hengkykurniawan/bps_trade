@@ -1445,6 +1445,15 @@
       return true;
     }
 
+    function flowCountryPoint(coords){
+      if (!coords) return null;
+      const latitude = +coords[0];
+      let longitude = +coords[1];
+      // Keep the Americas on the right-hand world copy used by this Indonesia-centred map.
+      if (longitude <= -30) longitude += 360;
+      return [latitude, longitude];
+    }
+
     async function updateMap(f){
       if (!(await ensureMap())) return;
       flowLayer.clearLayers();
@@ -1507,13 +1516,10 @@
         if (!pp) { miss.add(p); continue; }
         portSum.set(p, (portSum.get(p)||0) + v);
         if (!c) continue;
-        const cc = GEO.countries[c];
+        const cc = flowCountryPoint(GEO.countries[c]);
         if (!cc) { miss.add(c); continue; }
-        let clon = cc[1];
-        if (clon - pp[1] > 180) clon -= 360;
-        if (clon - pp[1] < -180) clon += 360;
         const col = colorFor(kind, signed);
-        L.polyline([[pp[0], pp[1]], [cc[0], clon]],
+        L.polyline([[pp[0], pp[1]], cc],
             {color: col, weight: 1 + 6*Math.sqrt(v/maxv), opacity: .4})
           .bindTooltip(`${p === '__ID__' ? 'Indonesia' : esc_(p)} &harr; ${esc_(c)}<br>${valueLabel(kind,signed)}`, {sticky: true})
           .addTo(flowLayer);
@@ -1527,7 +1533,7 @@
           .bindTooltip(`${p === '__ID__' ? 'Indonesia (all ports)' : esc_(p)}<br>US$ ${Math.round(v).toLocaleString()}`).addTo(flowLayer);
       }
       for (const [c, v] of ctrSum) {
-        const cc = GEO.countries[c];
+        const cc = flowCountryPoint(GEO.countries[c]);
         if (!cc) continue;
         L.circleMarker(cc, {radius: 2 + 5*Math.sqrt(v/maxv), color: '#fff', weight: 1, fillColor: ctrColor.get(c) || '#60708b', fillOpacity: .8})
           .bindTooltip(`${esc_(c)}<br>US$ ${Math.round(v).toLocaleString()}`).addTo(flowLayer);
