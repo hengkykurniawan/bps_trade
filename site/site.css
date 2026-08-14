@@ -122,14 +122,10 @@ nav a::before {
 .workspace { min-width: 0; width: 100%; max-width: 100%; overflow-x: hidden; padding: 4px 40px 0; }
 .hs-master-panel[hidden] { display: none !important; }
 .hs-master-panel { max-width: 1180px; margin: 0 auto; }
-.master-hero { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 28px; align-items: end; padding: 10px 0 22px; border-bottom: 1px solid var(--rule); }
+.master-hero { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; align-items: end; padding: 10px 0 22px; border-bottom: 1px solid var(--rule); }
 .master-kicker { display: block; margin-bottom: 7px; color: var(--coral-dark); font-size: 11px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; }
 .master-hero h2 { margin: 0 0 7px; font-size: clamp(32px, 3.2vw, 48px); line-height: 1; letter-spacing: -1.4px; }
 .master-hero p { max-width: 760px; margin: 0; color: var(--muted); font-size: 13.5px; line-height: 1.55; }
-.master-source { display: grid; gap: 3px; min-width: 188px; padding: 11px 13px; border: 1px solid var(--rule); border-radius: 7px; background: var(--sea-50); text-decoration: none; }
-.master-source:hover { border-color: var(--coral); }
-.master-source strong { font-size: 12px; }
-.master-source span { color: var(--muted); font-size: 10.5px; }
 .master-version-strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 7px; padding: 16px 0; }
 .master-version { display: grid; gap: 3px; min-height: 57px; padding: 9px 11px; border: 1px solid var(--rule); border-radius: 7px; background: white; color: var(--ink); text-align: left; cursor: pointer; }
 .master-version:hover { border-color: #98abc4; background: var(--sea-25); }
@@ -352,7 +348,6 @@ footer { width: 80%; margin: 0 auto; padding: 10px 40px 12px 300px; color: var(-
   .app-shell.master-mode .workspace { padding: 14px 20px 32px; }
   .app-shell.master-mode + footer { padding-left: 20px; }
   .master-hero { grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: start; }
-  .master-source { justify-self: start; }
   .master-version-strip { display: flex; overflow-x: auto; scrollbar-width: thin; }
   .master-version { flex: 0 0 148px; }
   .master-toolbar { grid-template-columns: minmax(0, 1fr); gap: 8px; }
