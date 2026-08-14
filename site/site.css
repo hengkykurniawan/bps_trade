@@ -32,7 +32,7 @@ header {
   border-bottom: 1px solid var(--rule);
   backdrop-filter: blur(14px);
 }
-header .shell { display: grid; grid-template-columns: auto minmax(240px, 1fr) auto; align-items: center; gap: 24px; width: 100%; min-height: 70px; padding: 0 34px; }
+header .shell { display: grid; grid-template-columns: auto minmax(240px, 1fr) auto; align-items: center; gap: 24px; width: 80%; min-height: 70px; margin: 0 auto; padding: 0 20px; }
 .brand { gap: 10px; font-size: 24px; letter-spacing: -.55px; }
 .brand strong { color: var(--ink); }
 .ship { width: 56px; height: 40px; }
@@ -67,8 +67,9 @@ nav a::before {
 .app-shell {
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr);
-  width: 100%;
-  max-width: 100%;
+  width: 80%;
+  max-width: 80%;
+  margin: 0 auto;
   min-height: calc(100vh - 70px);
 }
 
@@ -248,13 +249,14 @@ h3 { margin: 0 0 8px; color: var(--ink-soft); font-size: 11px; letter-spacing: .
 #stats.four-up { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 #stats b { display: block; margin-top: 5px; color: var(--ink); font-size: clamp(18px, 2.2vw, 31px); letter-spacing: -.7px; white-space: nowrap; }
 .statlab { color: var(--muted); font-size: 10px; }
-.vizgrid { grid-template-columns: 1.55fr repeat(2, minmax(0, 1fr)); gap: 18px; }
+.vizgrid { grid-template-columns: 1.55fr repeat(2, minmax(0, 1fr)); gap: 16px; }
 .viz.balance-mode .vizgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .viz.balance-mode .vizgrid > div:first-child { grid-column: auto; }
 .viz.balance-mode #c_time { max-width: none; }
 .vizgrid > div { padding: 8px 0 16px; border-bottom: 1px solid var(--rule-soft); }
 .vizgrid #c_port_wrap { display: none !important; }
-.viz h4 { color: var(--ink); }
+.viz h4 { color: var(--ink); font-size: 13px; }
+.viz svg text { font-size: 10px; }
 #map { height: 660px; border-radius: 6px; border-color: var(--rule); }
 #tablewrap { width: 100%; max-width: 100%; overflow-x: auto; border-radius: 6px; border-color: var(--rule); }
 .section-heading { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
@@ -263,9 +265,10 @@ h3 { margin: 0 0 8px; color: var(--ink-soft); font-size: 11px; letter-spacing: .
 th { background: var(--sea-50); color: var(--ink); }
 th, td { border-color: var(--rule-soft); padding: 8px 10px; }
 
-footer { padding: 18px 40px 24px 300px; color: var(--muted); font-size: 11px; text-align: center; }
+footer { width: 80%; margin: 0 auto; padding: 18px 40px 24px 300px; color: var(--muted); font-size: 11px; text-align: center; }
 
 @media (max-width: 1120px) {
+  header .shell, .app-shell, footer { width: 100%; max-width: 100%; }
   header .shell { gap: 14px; padding: 0 22px; }
   .header-copy p { max-width: 420px; }
   .config-band { grid-template-columns: 1fr auto 1fr; }

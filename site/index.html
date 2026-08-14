@@ -194,7 +194,7 @@
       .chapters { grid-template-columns: minmax(0, 1fr); }
     }
   </style>
-  <link rel="stylesheet" href="site.css?v=20260814-3">
+  <link rel="stylesheet" href="site.css?v=20260814-5">
 </head>
 <body>
   <header>
@@ -1156,7 +1156,7 @@
     }
 
     function drawBarsV(id, data, color){
-      const W = 560, H = 230, L = 48, R = 8, T = 10, B = 24;
+      const W = 560, H = 200, L = 48, R = 8, T = 10, B = 24;
       const max = Math.max(...data.map(d => d[1]), 1);
       const iw = W - L - R, ih = H - T - B, n = data.length;
       const slot = iw/n, bw = Math.max(2, Math.min(56, slot - 2));
@@ -1176,7 +1176,7 @@
     }
 
     function drawBarsH(id, data, color){
-      const W = 560, L = 170, R = 62, RH = 25, T = 4;
+      const W = 560, L = 170, R = 62, RH = 22, T = 4;
       const H = T + data.length*RH + 6;
       const max = Math.max(...data.map(d => d[1]), 1);
       const iw = W - L - R;
@@ -1193,7 +1193,7 @@
     }
 
     function drawBalanceBarsV(id, data){
-      const W = 560, H = 230, L = 52, R = 8, T = 10, B = 24;
+      const W = 560, H = 200, L = 52, R = 8, T = 10, B = 24;
       const values = data.map(d => d[1]);
       const min = Math.min(0, ...values), max = Math.max(0, ...values), span = max - min || 1;
       const iw = W - L - R, ih = H - T - B, n = Math.max(data.length, 1);
@@ -1218,7 +1218,7 @@
     }
 
     function drawBalanceBarsH(id, data){
-      const W = 560, L = 170, R = 62, RH = 25, T = 4;
+      const W = 560, L = 170, R = 62, RH = 22, T = 4;
       const H = T + data.length*RH + 6, values = data.map(d => d[1]);
       const min = Math.min(0, ...values), max = Math.max(0, ...values), span = max-min || 1;
       const iw = W-L-R, xFor = v => L + iw*(v-min)/span, zeroX = xFor(0);
@@ -1236,7 +1236,7 @@
     }
 
     function drawGroupedBarsV(id, data){
-      const W=560,H=230,L=48,R=8,T=10,B=24,iw=W-L-R,ih=H-T-B,n=Math.max(data.length,1);
+      const W=560,H=200,L=48,R=8,T=10,B=24,iw=W-L-R,ih=H-T-B,n=Math.max(data.length,1);
       const max=Math.max(1,...data.flatMap(d=>[d[1],d[2]])),slot=iw/n,bw=Math.max(2,Math.min(26,(slot-6)/2));
       let s=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`;
       for(let g=0;g<=4;g++){const y=T+ih-ih*g/4;s+=`<line x1="${L}" y1="${y}" x2="${W-R}" y2="${y}" stroke="${g?GRID:AXIS}"/><text x="${L-6}" y="${y+4}" text-anchor="end" class="val">${fmtV(max*g/4)}</text>`;}
@@ -1246,7 +1246,7 @@
     }
 
     function drawGroupedBarsH(id,data){
-      const W=560,L=170,R=66,RH=35,T=4,H=T+data.length*RH+6,max=Math.max(1,...data.flatMap(d=>[d[1],d[2]])),iw=W-L-R;
+      const W=560,L=170,R=66,RH=28,T=4,H=T+data.length*RH+6,max=Math.max(1,...data.flatMap(d=>[d[1],d[2]])),iw=W-L-R;
       let s=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg"><line x1="${L-4}" y1="${T}" x2="${L-4}" y2="${H-4}" stroke="${AXIS}"/>`;
       data.forEach(([lab,exp,imp],i)=>{const y=T+RH*i+3,name=lab.length>24?lab.slice(0,23)+'…':lab;s+=`<text x="${L-10}" y="${y+17}" text-anchor="end" class="name">${esc_(name)}</text>`;[[exp,EXPORT_COLOR,'Export',y],[imp,IMPORT_COLOR,'Import',y+15]].forEach(([v,color,kind,yy])=>{const w=Math.max(1,iw*v/max);s+=`<rect x="${L-4}" y="${yy}" width="${w}" height="11" rx="3" fill="${color}" data-tip="${esc_(lab)} · ${kind}: US$ ${Math.round(v).toLocaleString()}"/><text x="${L+w+1}" y="${yy+9}" class="val">${fmtV(v)}</text>`;});});
       el(id).innerHTML=s+'</svg>';
