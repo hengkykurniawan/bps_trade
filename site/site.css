@@ -76,7 +76,7 @@ nav a::before {
   width: 80%;
   max-width: 80%;
   margin: 0 auto;
-  min-height: calc(100vh - 70px);
+  min-height: calc(100vh - 108px);
 }
 .app-shell.master-mode { grid-template-columns: minmax(0, 1fr); }
 .app-shell.master-mode .query-rail { display: none; }
@@ -202,7 +202,7 @@ button.linkbtn { min-height: 0; color: var(--coral-dark); font-size: 11px; }
   display: grid;
   grid-template-columns: 185px minmax(0, 1fr);
   gap: 22px;
-  padding: 12px 14px;
+  padding: 8px 14px;
   border-bottom: 1px solid var(--rule);
 }
 .step-heading { display: flex; align-items: start; gap: 14px; }
@@ -238,29 +238,30 @@ button.linkbtn { min-height: 0; color: var(--coral-dark); font-size: 11px; }
 .segmented input:checked + span { border-color: var(--coral); background: #fff4f3; color: var(--coral-dark); }
 
 h3 { margin: 0 0 8px; color: var(--ink-soft); font-size: 11px; letter-spacing: .55px; }
-.period-grid { display: grid; grid-template-columns: minmax(140px,.35fr) minmax(400px,1.65fr); gap: 16px; }
+.period-grid { display: grid; grid-template-columns: minmax(140px,.35fr) minmax(400px,1.65fr); column-gap: 16px; row-gap: 4px; }
 .period-grid .scroll { height: 112px; max-height: 112px; display: grid; gap: 0 6px; }
 .period-grid #years { grid-template-columns: repeat(2, minmax(58px, 1fr)); }
 .period-grid #monthsbox { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .period-grid label.opt { gap: 5px; }
 .period-grid #monthsbox label.opt { font-size: 11px; white-space: nowrap; }
+.period-grid > div:nth-child(2) > label.opt { margin-top: 3px !important; padding-block: 2px; }
 .period-help, .geo-help { grid-column: 1 / -1; margin: 0; }
 .scroll { border-radius: 6px; background: var(--sea-25); border-color: var(--rule); }
 .opt { color: var(--ink-soft); font-size: 12px; }
 
-.geo-grid { display: grid; grid-template-columns: repeat(2, minmax(220px, 1fr)); gap: 18px; }
-.commodity-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .8fr) minmax(0, .9fr); gap: 22px; }
+.geo-grid { display: grid; grid-template-columns: repeat(2, minmax(220px, 1fr)); column-gap: 18px; row-gap: 4px; }
+.commodity-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .8fr) minmax(0, .9fr); column-gap: 22px; row-gap: 10px; }
 .chapter-picker { min-width: 0; width: 100%; }
 .chapter-picker #hsfilter { width: 100%; margin: 0 0 6px; }
-.commodity-list-note { min-height: 30px; margin: 0 0 6px; line-height: 1.35; }
-.chapters { width: 100%; min-width: 0; height: clamp(250px, 34vh, 340px); max-height: none !important; display: block; overflow-y: scroll; scrollbar-gutter: stable; overscroll-behavior: contain; }
+.commodity-list-note { min-height: 20px; margin: 0 0 4px; line-height: 1.35; }
+.chapters { width: 100%; min-width: 0; height: clamp(165px, 19vh, 195px); max-height: none !important; display: block; overflow-y: scroll; scrollbar-gutter: stable; overscroll-behavior: contain; }
 .chapters label.opt { min-width: 0; font-size: 11.5px; padding: 5px 0; border-bottom: 1px solid var(--rule-soft); white-space: normal; overflow-wrap: anywhere; }
-.level-option { align-items: start; gap: 9px; margin: 0 0 10px; }
+.level-option { align-items: start; gap: 9px; margin: 0 0 6px; }
 .level-option span { display: grid; gap: 2px; }
 .level-option b { color: var(--ink); font-size: 12px; }
 .level-option small { color: var(--muted); font-size: 11px; line-height: 1.4; }
-.extra-codes textarea { min-height: 106px; height: 106px; }
-.query-actions { display: flex; gap: 8px; margin-top: 14px; }
+.extra-codes textarea { min-height: 82px; height: 82px; }
+.query-actions { display: flex; gap: 8px; margin-top: 8px; }
 .query-actions .primary { flex: 1; }
 .progress-row { display: grid; grid-template-columns: auto minmax(100px,1fr) auto; gap: 14px; align-items: center; min-height: 44px; padding: 0 14px; border-bottom: 1px solid var(--rule); font-size: 11px; }
 #bar { display: block; height: 7px; margin: 0; background: var(--sea-100); }
@@ -312,7 +313,7 @@ h3 { margin: 0 0 8px; color: var(--ink-soft); font-size: 11px; letter-spacing: .
 th { background: var(--sea-50); color: var(--ink); }
 th, td { border-color: var(--rule-soft); padding: 8px 10px; }
 
-footer { width: 80%; margin: 0 auto; padding: 18px 40px 24px 300px; color: var(--muted); font-size: 11px; text-align: center; }
+footer { width: 80%; margin: 0 auto; padding: 10px 40px 12px 300px; color: var(--muted); font-size: 11px; text-align: center; }
 
 @media (max-width: 1120px) {
   header .shell, .app-shell, footer { width: 100%; max-width: 100%; }
@@ -341,6 +342,7 @@ footer { width: 80%; margin: 0 auto; padding: 18px 40px 24px 300px; color: var(-
   .header-copy p { max-width: none; white-space: normal; }
   .header-right { min-width: 0; }
   .app-shell { display: block; }
+  .app-shell { min-height: auto; }
   .query-rail { border: 0; border-bottom: 1px solid var(--rule); padding: 14px 20px; }
   .rail-sticky { position: static; }
   .rail-title { font-size: 14px; }
@@ -366,6 +368,9 @@ footer { width: 80%; margin: 0 auto; padding: 18px 40px 24px 300px; color: var(-
   .period-grid, .geo-grid, .commodity-grid { grid-template-columns: 1fr; }
   .extra-codes { grid-column: auto; }
   .period-grid .scroll, .period-grid #monthsbox { grid-template-columns: repeat(2, minmax(90px, 1fr)); }
+  .period-grid, .geo-grid, .commodity-grid { row-gap: 14px; }
+  .chapters { height: clamp(250px, 34vh, 340px); }
+  .extra-codes textarea { min-height: 106px; height: 106px; }
   .vizgrid { grid-template-columns: 1fr; }
   .viz.balance-mode .vizgrid { grid-template-columns: 1fr; }
   .viz.balance-mode .vizgrid > div:first-child { grid-column: auto; }
