@@ -212,8 +212,8 @@
         <nav aria-label="Primary navigation">
           <a href="https://github.com/hengkykurniawan/bps_trade" target="_blank" rel="noopener">GitHub</a>
         </nav>
-        <div id="latest-banner" class="latest-top" title="Checked against BPS on 12 July 2026">
-          <span>Latest data: May 2026</span>
+        <div id="latest-banner" class="latest-top" title="Newest month verified through BPS WebAPI">
+          <span>Latest data: checking BPS…</span>
         </div>
       </div>
     </div>
@@ -464,14 +464,18 @@
       saveApiKey(document.getElementById('apikey').value);
       document.getElementById('save-key').textContent = 'Saved';
       window.setTimeout(() => document.getElementById('save-key').textContent = 'Save locally', 1200);
+      refreshLatestFromBps();
     });
+    document.getElementById('apikey').addEventListener('change', refreshLatestFromBps);
     document.getElementById('clear-key').addEventListener('click', () => {
       document.getElementById('apikey').value = '';
       localStorage.removeItem('bps_api_key');
+      setLatestStatus('Latest data: add API key to check', 'Open API setup to verify the newest BPS month.');
     });
     document.getElementById('requestmode').addEventListener('change', event => {
       document.getElementById('corsproxy').value = event.target.value;
       saveCorsProxy(event.target.value);
+      refreshLatestFromBps();
     });
 
     // Configuration Initialization with dynamic fallback
@@ -580,13 +584,78 @@
       el('chart-deficit-key').hidden = !isBalance || compare;
     }
 
+    let latestCheckToken = 0;
+
+    function setLatestStatus(text, title = '') {
+      const banner = el('latest-banner');
+      banner.innerHTML = `<span>${text}</span>`;
+      banner.title = title;
+      banner.style.display = '';
+    }
+
     function showLatest(latest){
-      const b = el('latest-banner');
       const label = typeof latest === 'string' ? latest : latest.label;
       const at = (latest && latest.checked_at) ? latest.checked_at : '';
-      b.innerHTML = `<span>Latest Export/Import data: ${label}</span>` +
-        (at ? `<span class="latest-note">checked at server start · ${at}</span>` : '');
-      b.style.display = '';
+      const banner = el('latest-banner');
+      banner.innerHTML = `<span>Latest data: ${label}</span>` +
+        (at ? `<span class="latest-note">verified with BPS · ${at}</span>` : '');
+      banner.title = 'Newest available month returned by BPS WebAPI';
+      banner.style.display = '';
+    }
+
+    function latestFromRows(data) {
+      let newest = null;
+      for (const row of data || []) {
+        const year = Number(row.year);
+        const month = Number(row.month_id);
+        if (!Number.isInteger(year) || month < 1 || month > 12) continue;
+        if (!newest || year * 12 + month > newest.year * 12 + newest.month) newest = {year, month};
+      }
+      if (!newest) return null;
+      return {
+        ...newest,
+        label: new Date(Date.UTC(newest.year, newest.month - 1, 1)).toLocaleString('en-US', {month: 'long', year: 'numeric', timeZone: 'UTC'}),
+        checked_at: new Date().toLocaleString('en-GB', {day: '2-digit', month: 'short', year: 'numeric'})
+      };
+    }
+
+    async function refreshLatestFromBps() {
+      if (!isClientSideMode) return;
+      const apiKey = el('apikey').value.trim();
+      if (!apiKey) {
+        setLatestStatus('Latest data: add API key to check', 'Open API setup to verify the newest BPS month.');
+        return;
+      }
+      const token = ++latestCheckToken;
+      const corsProxy = el('corsproxy').value.trim();
+      setLatestStatus('Latest data: checking BPS…', 'Checking the newest available month through BPS WebAPI.');
+      const now = new Date();
+      for (let offset = 0; offset < 14; offset++) {
+        const candidate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - offset, 1));
+        const year = candidate.getUTCFullYear();
+        const month = candidate.getUTCMonth() + 1;
+        let probeRows;
+        try {
+          probeRows = await fetchEximDirect('export', ['27'], String(year), month, apiKey, corsProxy);
+        } catch (error) {
+          if (token === latestCheckToken) {
+            setLatestStatus('Latest data: BPS check unavailable', error && error.message ? error.message : 'Could not reach BPS WebAPI.');
+          }
+          return;
+        }
+        if (token !== latestCheckToken) return;
+        if (probeRows.length) {
+          const latest = latestFromRows(probeRows) || {
+            year,
+            month,
+            label: candidate.toLocaleString('en-US', {month: 'long', year: 'numeric', timeZone: 'UTC'}),
+            checked_at: new Date().toLocaleString('en-GB', {day: '2-digit', month: 'short', year: 'numeric'})
+          };
+          showLatest(latest);
+          return;
+        }
+      }
+      if (token === latestCheckToken) setLatestStatus('Latest data: unavailable from BPS', 'No monthly export records were returned in the last 14 months.');
     }
 
     function boxes(container, items, name, checkedFirst){
@@ -740,6 +809,8 @@
       }
       return rows;
     }
+
+    if (isClientSideMode) refreshLatestFromBps();
 
     function setAll(container, on){
       el(container).querySelectorAll('input[type=checkbox]').forEach(b => {
