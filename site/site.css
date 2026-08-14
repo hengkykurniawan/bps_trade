@@ -209,6 +209,19 @@ h3 { margin: 0 0 8px; color: var(--ink-soft); font-size: 11px; letter-spacing: .
 #log { margin: 10px 14px 0; }
 
 .results-panel { padding: 18px 0 22px; border-bottom: 1px solid var(--rule); }
+.balance-view { display: grid; grid-template-columns: minmax(210px, auto) minmax(340px, auto) 1fr; align-items: center; gap: 18px; margin-bottom: 12px; padding: 13px 14px; border: 1px solid var(--rule); border-left: 4px solid var(--coral); border-radius: 6px; background: var(--sea-25); }
+.balance-view[hidden] { display: none; }
+.balance-view > div:first-child { display: grid; gap: 4px; }
+.balance-view strong { font-size: 13px; }
+.compact-segmented span { min-width: 152px; padding: 9px 13px; }
+.balance-key { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 7px 13px; color: var(--muted); font-size: 11px; }
+.balance-key span { display: inline-flex; align-items: center; gap: 5px; }
+.balance-key span[hidden] { display: none; }
+.balance-key i { width: 12px; height: 5px; border-radius: 2px; }
+.key-export { background: #2a78d6; }
+.key-import { background: #eb6834; }
+.key-surplus { background: #168a67; }
+.key-deficit { background: #c13b3b; }
 .filters { padding: 14px; background: var(--sea-50); border: 1px solid var(--rule); border-radius: 6px; }
 .filters .f { flex: 1; min-width: 160px; }
 .filters select, .filters input[type=text] { width: 100%; min-width: 0; }
@@ -216,9 +229,13 @@ h3 { margin: 0 0 8px; color: var(--ink-soft); font-size: 11px; letter-spacing: .
 #stats > span { padding: 0 30px; border-right: 1px solid var(--rule); }
 #stats > span:first-child { padding-left: 0; }
 #stats > span:last-child { border-right: 0; }
+#stats.four-up { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 #stats b { display: block; margin-top: 5px; color: var(--ink); font-size: clamp(18px, 2.2vw, 31px); letter-spacing: -.7px; white-space: nowrap; }
 .statlab { color: var(--muted); font-size: 10px; }
 .vizgrid { grid-template-columns: 1.55fr repeat(2, minmax(0, 1fr)); gap: 18px; }
+.viz.balance-mode .vizgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.viz.balance-mode .vizgrid > div:first-child { grid-column: 1 / -1; }
+.viz.balance-mode #c_time { max-width: 760px; }
 .vizgrid > div { padding: 8px 0 16px; border-bottom: 1px solid var(--rule-soft); }
 .vizgrid #c_port_wrap { display: none !important; }
 .viz h4 { color: var(--ink); }
@@ -238,6 +255,8 @@ footer { padding: 18px 40px 24px 300px; color: var(--muted); font-size: 11px; te
   .query-step { grid-template-columns: 150px minmax(0, 1fr); }
   .commodity-grid { grid-template-columns: 1fr 1fr; }
   .extra-codes { grid-column: 1 / -1; }
+  .balance-view { grid-template-columns: 1fr auto; }
+  .balance-key { grid-column: 1 / -1; justify-content: flex-start; }
 }
 
 @media (min-width: 861px) and (max-width: 1080px) {
@@ -261,7 +280,10 @@ footer { padding: 18px 40px 24px 300px; color: var(--muted); font-size: 11px; te
   .extra-codes { grid-column: auto; }
   .period-grid .scroll, .period-grid #monthsbox { grid-template-columns: repeat(2, minmax(90px, 1fr)); }
   .vizgrid { grid-template-columns: 1fr; }
+  .viz.balance-mode .vizgrid { grid-template-columns: 1fr; }
+  .viz.balance-mode .vizgrid > div:first-child { grid-column: auto; }
   #stats { grid-template-columns: 1fr; gap: 14px; }
+  #stats.four-up { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #stats > span { padding: 0 0 14px; border-right: 0; border-bottom: 1px solid var(--rule); }
   #stats b { font-size: 28px; }
   footer { padding: 18px 20px 24px; }
@@ -274,6 +296,11 @@ footer { padding: 18px 40px 24px 300px; color: var(--muted); font-size: 11px; te
   .workspace-heading h1 { font-size: 30px; }
   .segmented { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
   .segmented span { min-width: 0; }
+  .flow-step .segmented label:last-child { grid-column: 1 / -1; }
+  .balance-view { grid-template-columns: minmax(0, 1fr); }
+  .compact-segmented { grid-template-columns: minmax(0, 1fr); }
+  .compact-segmented label:last-child { grid-column: auto; }
+  #stats.four-up { grid-template-columns: minmax(0, 1fr); }
   .filters { align-items: stretch; }
   .filters .primary { width: 100%; margin-left: 0 !important; }
 }

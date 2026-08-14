@@ -273,6 +273,7 @@
           <div class="segmented" role="group" aria-label="Trade flow">
             <label><input type="radio" name="flow" value="export" checked><span>Export</span></label>
             <label><input type="radio" name="flow" value="import"><span>Import</span></label>
+            <label><input type="radio" name="flow" value="balance"><span>Balance (Ex−Im)</span></label>
           </div>
         </div>
 
@@ -345,6 +346,22 @@
 
       <!-- Results section -->
       <section class="results-panel" id="results" style="display:none">
+        <div class="balance-view" id="balance-view" hidden>
+          <div>
+            <span class="statlab">Balance display</span>
+            <strong>Choose how Export − Import is presented</strong>
+          </div>
+          <div class="segmented compact-segmented" role="radiogroup" aria-label="Balance display">
+            <label><input type="radio" name="balanceview" value="balance" checked onchange="render()"><span>Balance only</span></label>
+            <label><input type="radio" name="balanceview" value="compare" onchange="render()"><span>Export &amp; Import side by side</span></label>
+          </div>
+          <div class="balance-key" aria-label="Chart colors">
+            <span><i class="key-export"></i>Export</span>
+            <span><i class="key-import"></i>Import</span>
+            <span><i class="key-surplus"></i>Surplus</span>
+            <span><i class="key-deficit"></i>Deficit</span>
+          </div>
+        </div>
         <div class="filters">
           <div class="f"><span class="statlab">Pelabuhan (port)</span><select id="fport" onchange="render()"></select></div>
           <div class="f"><span class="statlab">Negara (country)</span><select id="fctr" onchange="render()"></select></div>
@@ -359,9 +376,9 @@
       <section class="viz results-panel" id="vizcard" style="display:none">
         <div class="vizgrid">
           <div><h4 id="t_time"></h4><div id="c_time"></div></div>
-          <div id="c_ctr_wrap"><h4>Top countries by value (US$)</h4><div id="c_ctr"></div></div>
-          <div id="c_hs_wrap"><h4>Top HS codes by value (US$)</h4><div id="c_hs"></div></div>
-          <div id="c_port_wrap"><h4>Top ports by value (US$)</h4><div id="c_port"></div></div>
+          <div id="c_ctr_wrap"><h4 id="t_ctr">Top countries by value (US$)</h4><div id="c_ctr"></div></div>
+          <div id="c_hs_wrap"><h4 id="t_hs">Top HS codes by value (US$)</h4><div id="c_hs"></div></div>
+          <div id="c_port_wrap"><h4 id="t_port">Top ports by value (US$)</h4><div id="c_port"></div></div>
         </div>
         <div class="mini" style="margin-top:12px;">Charts follow the filters above. Hover a bar for the exact value.</div>
       </section>
@@ -370,8 +387,10 @@
       <section class="results-panel" id="mapcard" style="display:none">
         <div class="legend" style="flex-wrap: wrap; gap: 16px;">
           <b style="color:var(--navy)">Trade flow map</b>
-          <span><span class="sw" style="background:#2a78d6"></span>export flows</span>
-          <span><span class="sw" style="background:#eb6834"></span>import flows</span>
+          <span id="map-export-key"><span class="sw" style="background:#2a78d6"></span>export flows</span>
+          <span id="map-import-key"><span class="sw" style="background:#eb6834"></span>import flows</span>
+          <span id="map-surplus-key" hidden><span class="sw" style="background:#168a67"></span>trade surplus</span>
+          <span id="map-deficit-key" hidden><span class="sw" style="background:#c13b3b"></span>trade deficit</span>
           <span><span class="sw" style="background:#0d366b;height:10px;width:10px;border-radius:50%"></span>Indonesian port</span>
           <label class="opt" style="margin:0; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;"><input type="checkbox" id="showflows" checked onchange="if (rows.length) updateMap(filtered())"> Show flow lines</label>
         </div>
@@ -520,8 +539,24 @@
     }
 
     let rows = [], cancelled = false, hasPort = true, hasCtr = true, hasHs = true, hasMonth = true;
+    let selectedFlow = 'export';
 
     function el(id){ return document.getElementById(id); }
+
+    const flowLabel = flow => ({export: 'Export', import: 'Import', balance: 'Balance (Export − Import)'})[flow] || flow;
+    const balanceView = () => (document.querySelector('input[name=balanceview]:checked') || {}).value || 'balance';
+
+    function syncBalanceUI(){
+      const isBalance = selectedFlow === 'balance';
+      const compare = isBalance && balanceView() === 'compare';
+      el('balance-view').hidden = !isBalance;
+      el('map-export-key').hidden = isBalance && !compare;
+      el('map-import-key').hidden = isBalance && !compare;
+      el('map-surplus-key').hidden = !isBalance || compare;
+      el('map-deficit-key').hidden = !isBalance || compare;
+      document.querySelectorAll('.key-export,.key-import').forEach(k => k.closest('span').hidden = isBalance && !compare);
+      document.querySelectorAll('.key-surplus,.key-deficit').forEach(k => k.closest('span').hidden = !isBalance || compare);
+    }
 
     function showLatest(latest){
       const b = el('latest-banner');
@@ -545,7 +580,7 @@
       const years = [...document.querySelectorAll('input[name=year]:checked')].map(x => x.value);
       const months = [...document.querySelectorAll('input[name=month]:checked')].map(x => String(x.value).padStart(2, '0'));
       const chapters = [...document.querySelectorAll('input[name=hs]:checked')].map(x => x.value);
-      el('summary-flow').textContent = flow ? (flow.value === 'export' ? 'Export' : 'Import') : '—';
+      el('summary-flow').textContent = flow ? flowLabel(flow.value) : '—';
       el('summary-period').textContent = `${years.length ? years.join(', ') : 'No year'} · ${months.length ? months.join(', ') : 'annual'}`;
       el('summary-geo').textContent = `${el('incport').checked ? (el('portsel').value || 'All ports') : 'Ports aggregated'} · ${el('incctr').checked ? (el('ctrsel').value || 'All countries') : 'World total'}`;
       el('summary-commodity').textContent = chapters.length ? `HS ${chapters.slice(0,4).join(', ')}${chapters.length > 4 ? ' +' + (chapters.length - 4) : ''}` : 'Choose HS chapters';
@@ -699,8 +734,40 @@
       return [...document.querySelectorAll(`input[name=${name}]:checked`)].map(b => b.value);
     }
 
+    function combineBalanceRows(source){
+      const combined = new Map();
+      for (const r of source) {
+        const key = [r.year, r.month_id, r.hs_code, r.port, r.country].join('|');
+        if (!combined.has(key)) combined.set(key, {
+          ...r,
+          flow: 'balance',
+          export_value_usd: 0,
+          import_value_usd: 0,
+          export_netweight_kg: 0,
+          import_netweight_kg: 0
+        });
+        const item = combined.get(key);
+        if (r.flow === 'export') {
+          item.export_value_usd += +r.value_usd || 0;
+          item.export_netweight_kg += +r.netweight_kg || 0;
+        } else if (r.flow === 'import') {
+          item.import_value_usd += +r.value_usd || 0;
+          item.import_netweight_kg += +r.netweight_kg || 0;
+        }
+      }
+      return [...combined.values()].map(r => ({
+        ...r,
+        balance_usd: r.export_value_usd - r.import_value_usd,
+        balance_netweight_kg: r.export_netweight_kg - r.import_netweight_kg,
+        value_usd: r.export_value_usd - r.import_value_usd,
+        netweight_kg: r.export_netweight_kg - r.import_netweight_kg
+      }));
+    }
+
     async function fetchAll(){
       const flow = document.querySelector('input[name=flow]:checked').value;
+      selectedFlow = flow;
+      const requestFlows = flow === 'balance' ? ['export', 'import'] : [flow];
       const years = picked('year');
       const months = picked('month').length ? picked('month') : [''];
       const chapters = picked('hs');
@@ -756,6 +823,8 @@
       if (full.length)
         for (const b of chunk(full)) for (const y of years) for (const m of months) jobs.push({b, y, m});
 
+      const requests = jobs.flatMap(job => requestFlows.map(requestFlow => ({...job, flow: requestFlow})));
+
       rows = []; cancelled = false;
       el('go').disabled = true; el('cancel').style.display = '';
       el('bar').style.display = ''; el('bar').firstElementChild.style.width = '0%';
@@ -766,13 +835,13 @@
         let d;
         if (isClientSideMode) {
           try {
-            const fetchedRows = await fetchEximDirect(flow, job.b, job.y, job.m, apiKey, corsProxy);
+            const fetchedRows = await fetchEximDirect(job.flow, job.b, job.y, job.m, apiKey, corsProxy);
             d = { rows: fetchedRows };
           } catch(e) {
             d = { error: e.message };
           }
         } else {
-          const u = `/api/exim?flow=${flow}&hs=${job.b.join(';')}&year=${job.y}&month=${job.m}`;
+          const u = `/api/exim?flow=${job.flow}&hs=${job.b.join(';')}&year=${job.y}&month=${job.m}`;
           const r = await fetch(u);
           d = await r.json();
         }
@@ -780,12 +849,12 @@
         if (!d.rows.length) empty++;
         rows.push(...d.rows);
         done++;
-        el('bar').firstElementChild.style.width = (100*done/jobs.length) + '%';
-        el('progtext').textContent = `${done}/${jobs.length} requests, ${rows.length.toLocaleString()} rows`;
+        el('bar').firstElementChild.style.width = (100*done/requests.length) + '%';
+        el('progtext').textContent = `${done}/${requests.length} requests, ${rows.length.toLocaleString()} source rows`;
       };
 
       try {
-        const queue = [...jobs];
+        const queue = [...requests];
         const workers = Array.from({length: 4}, async () => {
           while (queue.length && !cancelled) await run(queue.shift());
         });
@@ -835,6 +904,8 @@
         note += ` (aggregated over ${notes.join(' & ')})`;
       }
 
+      if (selectedFlow === 'balance') rows = combineBalanceRows(rows);
+
       el('progtext').textContent = `${rows.length.toLocaleString()} rows${note}`
         + (empty ? ` (${empty} request(s) with no data skipped)` : '');
       rows.sort((a, b) =>
@@ -873,6 +944,8 @@
       }
       el('fsearch').value = '';
     }
+    const AGG_NUMERIC = ['value_usd','netweight_kg','export_value_usd','import_value_usd','balance_usd','export_netweight_kg','import_netweight_kg','balance_netweight_kg'];
+
     function filtered(){
       const p = el('fport').value, c = el('fctr').value, h = el('fhs').value,
             q = el('fsearch').value.toLowerCase();
@@ -887,16 +960,15 @@
           const k = [r.flow, r.year, r.month_id, r.port, r.country].join('|');
           const a = agg.get(k);
           if (a) {
-            a.value_usd += +r.value_usd || 0;
-            a.netweight_kg += +r.netweight_kg || 0;
+            for (const field of AGG_NUMERIC) a[field] = (+a[field] || 0) + (+r[field] || 0);
           } else {
-            agg.set(k, {
+            const totalRow = {
               ...r,
               hs_code: 'Total',
-              hs_desc: 'Total of selected HS codes',
-              value_usd: +r.value_usd || 0,
-              netweight_kg: +r.netweight_kg || 0
-            });
+              hs_desc: 'Total of selected HS codes'
+            };
+            for (const field of AGG_NUMERIC) totalRow[field] = +r[field] || 0;
+            agg.set(k, totalRow);
           }
         }
         res = [...agg.values()];
@@ -904,41 +976,76 @@
       return res;
     }
 
-    const COLS = ['flow','year','month_id','month','hs_code','hs_desc','port','country','value_usd','netweight_kg'];
-    const NUM = new Set(['value_usd','netweight_kg']);
-    const activeCols = () => COLS.filter(c =>
-      (hasPort || c !== 'port') && (hasCtr || c !== 'country') &&
-      (hasHs || (c !== 'hs_code' && c !== 'hs_desc')) &&
-      (hasMonth || (c !== 'month_id' && c !== 'month')));
+    const NUM = new Set(AGG_NUMERIC);
+    const COL_LABELS = {
+      value_usd: 'value (US$)', netweight_kg: 'net weight (kg)',
+      export_value_usd: 'export (US$)', import_value_usd: 'import (US$)', balance_usd: 'balance (US$)',
+      export_netweight_kg: 'export weight (kg)', import_netweight_kg: 'import weight (kg)', balance_netweight_kg: 'weight balance (kg)'
+    };
+    const activeCols = () => {
+      const dims = ['year','month_id','month','hs_code','hs_desc','port','country'].filter(c =>
+        (hasPort || c !== 'port') && (hasCtr || c !== 'country') &&
+        (hasHs || (c !== 'hs_code' && c !== 'hs_desc')) &&
+        (hasMonth || (c !== 'month_id' && c !== 'month')));
+      if (selectedFlow !== 'balance') return ['flow', ...dims, 'value_usd', 'netweight_kg'];
+      const metrics = balanceView() === 'compare'
+        ? ['export_value_usd','import_value_usd','balance_usd','export_netweight_kg','import_netweight_kg','balance_netweight_kg']
+        : ['balance_usd','balance_netweight_kg'];
+      return [...dims, ...metrics];
+    };
 
     function render(){
       const f = filtered();
       const usd = f.reduce((s,r)=>s+(+r.value_usd||0), 0);
       const kg  = f.reduce((s,r)=>s+(+r.netweight_kg||0), 0);
-      el('stats').innerHTML =
-        `<span><div class="statlab">rows (filtered / fetched)</div><b>${f.length.toLocaleString()} / ${rows.length.toLocaleString()}</b></span>` +
-        `<span><div class="statlab">total value (US$)</div><b>${usd.toLocaleString(undefined,{maximumFractionDigits:0})}</b></span>` +
-        `<span><div class="statlab">total net weight (kg)</div><b>${kg.toLocaleString(undefined,{maximumFractionDigits:0})}</b></span>`;
+      const compare = selectedFlow === 'balance' && balanceView() === 'compare';
+      syncBalanceUI();
+      el('vizcard').classList.toggle('balance-mode', selectedFlow === 'balance');
+      el('stats').classList.toggle('four-up', compare);
+      if (selectedFlow === 'balance') {
+        const exp = f.reduce((s,r)=>s+(+r.export_value_usd||0), 0);
+        const imp = f.reduce((s,r)=>s+(+r.import_value_usd||0), 0);
+        const rowStat = `<span><div class="statlab">rows (filtered / fetched)</div><b>${f.length.toLocaleString()} / ${rows.length.toLocaleString()}</b></span>`;
+        el('stats').innerHTML = compare
+          ? rowStat +
+            `<span><div class="statlab">total export (US$)</div><b>${exp.toLocaleString(undefined,{maximumFractionDigits:0})}</b></span>` +
+            `<span><div class="statlab">total import (US$)</div><b>${imp.toLocaleString(undefined,{maximumFractionDigits:0})}</b></span>` +
+            `<span><div class="statlab">trade balance (US$)</div><b>${usd.toLocaleString(undefined,{maximumFractionDigits:0})}</b></span>`
+          : rowStat +
+            `<span><div class="statlab">trade balance (US$)</div><b>${usd.toLocaleString(undefined,{maximumFractionDigits:0})}</b></span>` +
+            `<span><div class="statlab">net weight balance (kg)</div><b>${kg.toLocaleString(undefined,{maximumFractionDigits:0})}</b></span>`;
+      } else {
+        el('stats').innerHTML =
+          `<span><div class="statlab">rows (filtered / fetched)</div><b>${f.length.toLocaleString()} / ${rows.length.toLocaleString()}</b></span>` +
+          `<span><div class="statlab">total value (US$)</div><b>${usd.toLocaleString(undefined,{maximumFractionDigits:0})}</b></span>` +
+          `<span><div class="statlab">total net weight (kg)</div><b>${kg.toLocaleString(undefined,{maximumFractionDigits:0})}</b></span>`;
+      }
       const cap = 1000, show = f.slice(0, cap), cols = activeCols();
       el('tbl').innerHTML =
-        '<tr>' + cols.map(c=>`<th class="${NUM.has(c)?'num':''}">${c}</th>`).join('') + '</tr>' +
+        '<tr>' + cols.map(c=>`<th class="${NUM.has(c)?'num':''}">${COL_LABELS[c] || c}</th>`).join('') + '</tr>' +
         show.map(r => '<tr>' + cols.map(c => {
           let v = r[c] ?? '';
           if (NUM.has(c)) v = (+v).toLocaleString();
           return `<td class="${NUM.has(c)?'num':''}">${String(v).replace(/</g,'&lt;')}</td>`;
         }).join('') + '</tr>').join('');
-      el('tablenote').textContent = f.length > cap
-        ? `Preview limited to ${cap.toLocaleString()} rows - the CSV download contains all ${f.length.toLocaleString()} filtered rows.` : '';
+      const previewNote = f.length > cap
+        ? `Preview limited to ${cap.toLocaleString()} rows - the CSV download contains all ${f.length.toLocaleString()} filtered rows. ` : '';
+      el('tablenote').textContent = previewNote + (selectedFlow === 'balance'
+        ? 'Trade balance is Export − Import; a missing side is treated as zero.' : '');
       renderCharts(f);
       rebuildSlider(f);
       updateMap(f);
     }
 
     // ---------------------------------------------------------------- charts
-    const BLUE = '#ff4d45', ORANGE = '#2a78d6', GRID = '#e1e8f1', AXIS = '#aebed2';
+    const EXPORT_COLOR = '#2a78d6', IMPORT_COLOR = '#eb6834', SURPLUS_COLOR = '#168a67', DEFICIT_COLOR = '#c13b3b';
+    const GRID = '#e1e8f1', AXIS = '#aebed2';
     const esc_ = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
-    const fmtV = v => v >= 1e9 ? (v/1e9).toFixed(1)+'B' : v >= 1e6 ? (v/1e6).toFixed(1)+'M'
-                  : v >= 1e3 ? (v/1e3).toFixed(0)+'K' : String(Math.round(v));
+    const fmtV = v => {
+      const sign = v < 0 ? '−' : '', a = Math.abs(v);
+      return sign + (a >= 1e9 ? (a/1e9).toFixed(1)+'B' : a >= 1e6 ? (a/1e6).toFixed(1)+'M'
+        : a >= 1e3 ? (a/1e3).toFixed(0)+'K' : String(Math.round(a)));
+    };
     function showTip(ev, html){ const t = el('tip'); t.innerHTML = html; t.style.display = 'block';
       t.style.left = Math.min(ev.clientX + 14, innerWidth - 290) + 'px'; t.style.top = (ev.clientY + 14) + 'px'; }
     function hideTip(){ el('tip').style.display = 'none'; }
@@ -989,15 +1096,119 @@
       el(id).innerHTML = s + '</svg>';
     }
 
+    function drawBalanceBarsV(id, data){
+      const W = 560, H = 230, L = 52, R = 8, T = 10, B = 24;
+      const values = data.map(d => d[1]);
+      const min = Math.min(0, ...values), max = Math.max(0, ...values), span = max - min || 1;
+      const iw = W - L - R, ih = H - T - B, n = Math.max(data.length, 1);
+      const slot = iw/n, bw = Math.max(2, Math.min(56, slot - 3));
+      const yFor = v => T + ih * (max - v) / span;
+      const zeroY = yFor(0);
+      let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`;
+      for (let g = 0; g <= 4; g++) {
+        const value = min + span*g/4, y = yFor(value);
+        s += `<line x1="${L}" y1="${y}" x2="${W-R}" y2="${y}" stroke="${Math.abs(value) < span/1000 ? AXIS : GRID}" stroke-width="1"/>`
+          + `<text x="${L-6}" y="${y+4}" text-anchor="end" class="val">${fmtV(value)}</text>`;
+      }
+      const step = Math.max(1, Math.ceil(data.length / 8));
+      data.forEach(([lab, value], i) => {
+        const x = L + slot*i + (slot-bw)/2, endY = yFor(value);
+        const y = value >= 0 ? endY : zeroY, h = Math.max(1, Math.abs(zeroY-endY));
+        const color = value >= 0 ? SURPLUS_COLOR : DEFICIT_COLOR;
+        s += `<path d="${roundTopBar(x,y,bw,h)}" fill="${color}" data-tip="${esc_(lab)}: Trade balance US$ ${Math.round(value).toLocaleString()}"/>`;
+        if (i % step === 0) s += `<text x="${x+bw/2}" y="${H-8}" text-anchor="middle">${esc_(lab)}</text>`;
+      });
+      el(id).innerHTML = s + '</svg>';
+    }
+
+    function drawBalanceBarsH(id, data){
+      const W = 560, L = 170, R = 62, RH = 25, T = 4;
+      const H = T + data.length*RH + 6, values = data.map(d => d[1]);
+      const min = Math.min(0, ...values), max = Math.max(0, ...values), span = max-min || 1;
+      const iw = W-L-R, xFor = v => L + iw*(v-min)/span, zeroX = xFor(0);
+      let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`;
+      s += `<line x1="${zeroX}" y1="${T}" x2="${zeroX}" y2="${H-4}" stroke="${AXIS}" stroke-width="1"/>`;
+      data.forEach(([lab,value],i) => {
+        const y=T+RH*i+4, end=xFor(value), x=Math.min(zeroX,end), w=Math.max(1,Math.abs(end-zeroX));
+        const name=lab.length>24?lab.slice(0,23)+'…':lab, color=value>=0?SURPLUS_COLOR:DEFICIT_COLOR;
+        const valueX=value>=0?end+3:end-3, anchor=value>=0?'start':'end';
+        s += `<text x="${L-10}" y="${y+11}" text-anchor="end" class="name">${esc_(name)}</text>`
+          + `<rect x="${x}" y="${y}" width="${w}" height="${RH-9}" rx="3" fill="${color}" data-tip="${esc_(lab)}: Trade balance US$ ${Math.round(value).toLocaleString()}"/>`
+          + `<text x="${valueX}" y="${y+11}" text-anchor="${anchor}" class="val">${fmtV(value)}</text>`;
+      });
+      el(id).innerHTML=s+'</svg>';
+    }
+
+    function drawGroupedBarsV(id, data){
+      const W=560,H=230,L=48,R=8,T=10,B=24,iw=W-L-R,ih=H-T-B,n=Math.max(data.length,1);
+      const max=Math.max(1,...data.flatMap(d=>[d[1],d[2]])),slot=iw/n,bw=Math.max(2,Math.min(26,(slot-6)/2));
+      let s=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`;
+      for(let g=0;g<=4;g++){const y=T+ih-ih*g/4;s+=`<line x1="${L}" y1="${y}" x2="${W-R}" y2="${y}" stroke="${g?GRID:AXIS}"/><text x="${L-6}" y="${y+4}" text-anchor="end" class="val">${fmtV(max*g/4)}</text>`;}
+      const step=Math.max(1,Math.ceil(data.length/8));
+      data.forEach(([lab,exp,imp],i)=>{const center=L+slot*i+slot/2;[[exp,EXPORT_COLOR,'Export',center-bw-1],[imp,IMPORT_COLOR,'Import',center+1]].forEach(([v,color,name,x])=>{const h=Math.max(1,ih*v/max),y=T+ih-h;s+=`<path d="${roundTopBar(x,y,bw,h)}" fill="${color}" data-tip="${esc_(lab)} · ${name}: US$ ${Math.round(v).toLocaleString()}"/>`;});if(i%step===0)s+=`<text x="${center}" y="${H-8}" text-anchor="middle">${esc_(lab)}</text>`;});
+      el(id).innerHTML=s+'</svg>';
+    }
+
+    function drawGroupedBarsH(id,data){
+      const W=560,L=170,R=66,RH=35,T=4,H=T+data.length*RH+6,max=Math.max(1,...data.flatMap(d=>[d[1],d[2]])),iw=W-L-R;
+      let s=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg"><line x1="${L-4}" y1="${T}" x2="${L-4}" y2="${H-4}" stroke="${AXIS}"/>`;
+      data.forEach(([lab,exp,imp],i)=>{const y=T+RH*i+3,name=lab.length>24?lab.slice(0,23)+'…':lab;s+=`<text x="${L-10}" y="${y+17}" text-anchor="end" class="name">${esc_(name)}</text>`;[[exp,EXPORT_COLOR,'Export',y],[imp,IMPORT_COLOR,'Import',y+15]].forEach(([v,color,kind,yy])=>{const w=Math.max(1,iw*v/max);s+=`<rect x="${L-4}" y="${yy}" width="${w}" height="11" rx="3" fill="${color}" data-tip="${esc_(lab)} · ${kind}: US$ ${Math.round(v).toLocaleString()}"/><text x="${L+w+1}" y="${yy+9}" class="val">${fmtV(v)}</text>`;});});
+      el(id).innerHTML=s+'</svg>';
+    }
+
     function renderCharts(f){
-      const color = f[0] && f[0].flow === 'import' ? ORANGE : BLUE;
+      const color = selectedFlow === 'import' ? IMPORT_COLOR : EXPORT_COLOR;
       const sum = keyf => { const m = new Map();
         for (const r of f){ const k = keyf(r); m.set(k, (m.get(k)||0) + (+r.value_usd||0)); } return m; };
-      const per = [...sum(r => r.month_id ? `${r.year}-${r.month_id}` : String(r.year)).entries()]
+      const periodKey = r => r.month_id ? `${r.year}-${r.month_id}` : String(r.year);
+
+      if (selectedFlow === 'balance') {
+        const compare = balanceView() === 'compare';
+        const sumBalance = keyf => {
+          const m = new Map();
+          for (const r of f) {
+            const k = keyf(r), a = m.get(k) || {export:0, import:0, balance:0};
+            a.export += +r.export_value_usd || 0;
+            a.import += +r.import_value_usd || 0;
+            a.balance += +r.balance_usd || 0;
+            m.set(k,a);
+          }
+          return m;
+        };
+        const perMap = sumBalance(periodKey), isMonthly = [...perMap.keys()][0]?.includes('-');
+        const per = [...perMap.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
+        el('t_time').textContent = compare
+          ? `Export and import by ${isMonthly?'month':'year'} (US$)`
+          : `Trade balance by ${isMonthly?'month':'year'} (Export − Import, US$)`;
+        if (compare) drawGroupedBarsV('c_time', per.map(([k,v])=>[k,v.export,v.import]));
+        else drawBalanceBarsV('c_time', per.map(([k,v])=>[k,v.balance]));
+
+        const drawTop = (wrapId, chartId, titleId, label, keyf) => {
+          el(wrapId).style.display = '';
+          const items = [...sumBalance(keyf).entries()]
+            .sort((a,b)=>compare ? (b[1].export+b[1].import)-(a[1].export+a[1].import) : Math.abs(b[1].balance)-Math.abs(a[1].balance))
+            .slice(0,10);
+          el(titleId).textContent = compare ? `Top ${label} by total trade (US$)` : `Largest trade balances by ${label} (US$)`;
+          if (compare) drawGroupedBarsH(chartId, items.map(([k,v])=>[k,v.export,v.import]));
+          else drawBalanceBarsH(chartId, items.map(([k,v])=>[k,v.balance]));
+        };
+        el('c_ctr_wrap').style.display = hasCtr ? '' : 'none';
+        if (hasCtr) drawTop('c_ctr_wrap','c_ctr','t_ctr','countries',r=>r.country);
+        el('c_hs_wrap').style.display = hasHs ? '' : 'none';
+        if (hasHs) drawTop('c_hs_wrap','c_hs','t_hs','HS codes',r=>r.hs_code);
+        el('c_port_wrap').style.display = hasPort ? '' : 'none';
+        if (hasPort) drawTop('c_port_wrap','c_port','t_port','ports',r=>r.port);
+        return;
+      }
+
+      const per = [...sum(periodKey).entries()]
         .sort((a,b) => a[0].localeCompare(b[0]));
       el('t_time').textContent = `Value by ${per[0] && per[0][0].includes('-') ? 'month' : 'year'} (US$)`;
       drawBarsV('c_time', per, color);
       const top = keyf => [...sum(keyf).entries()].sort((a,b) => b[1]-a[1]).slice(0, 10);
+      el('t_ctr').textContent = 'Top countries by value (US$)';
+      el('t_hs').textContent = 'Top HS codes by value (US$)';
+      el('t_port').textContent = 'Top ports by value (US$)';
       el('c_ctr_wrap').style.display = hasCtr ? '' : 'none';
       if (hasCtr) drawBarsH('c_ctr', top(r => r.country), color);
       el('c_hs_wrap').style.display = hasHs ? '' : 'none';
@@ -1069,15 +1280,22 @@
       if (!(await ensureMap())) return;
       flowLayer.clearLayers();
       if (mapYearIdx) f = f.filter(r => String(r.year) === mapYears[mapYearIdx-1]);
-      const col = f[0] && f[0].flow === 'import' ? ORANGE : BLUE;
+      const isBalance = selectedFlow === 'balance', compare = isBalance && balanceView() === 'compare';
+      const colorFor = (kind, signed) => kind === 'export' ? EXPORT_COLOR
+        : kind === 'import' ? IMPORT_COLOR : signed >= 0 ? SURPLUS_COLOR : DEFICIT_COLOR;
+      const valueLabel = (kind, signed) => kind === 'balance'
+        ? `${signed >= 0 ? 'Trade surplus' : 'Trade deficit'}: US$ ${Math.abs(Math.round(signed)).toLocaleString()}`
+        : `${flowLabel(kind)}: US$ ${Math.round(Math.abs(signed)).toLocaleString()}`;
 
       if (!el('showflows').checked) {
-        // Ports-only view: each Indonesian port sized by its total value, no lines/countries.
+        // Ports-only view: each Indonesian port sized by the active measure, no lines/countries.
         const portSum = new Map(), miss = new Set();
         for (const r of f) {
           const p = hasPort ? r.port : '__ID__';
           if (!p) continue;  // skip BPS NULL-port rows
-          portSum.set(p, (portSum.get(p)||0) + (+r.value_usd||0));
+          const amount = compare ? (+r.export_value_usd||0) + (+r.import_value_usd||0)
+            : isBalance ? Math.abs(+r.balance_usd||0) : (+r.value_usd||0);
+          portSum.set(p, (portSum.get(p)||0) + amount);
         }
         const maxv = Math.max(...portSum.values(), 1);
         let shownPorts = 0;
@@ -1089,22 +1307,33 @@
           shownPorts++;
         }
         el('mapnote').textContent =
-          `${mapYearIdx ? mapYears[mapYearIdx-1] : 'all years'}: ${shownPorts} port(s) shown, sized by total value (flows hidden)` +
+          `${mapYearIdx ? mapYears[mapYearIdx-1] : 'all years'}: ${shownPorts} port(s) shown, sized by ${isBalance && !compare ? 'absolute trade balance' : 'total trade value'} (flows hidden)` +
           (miss.size ? ` - no coordinates for: ${[...miss].slice(0, 6).join(', ')}${miss.size > 6 ? ' …' : ''}` : '');
         return;
       }
 
       const flows = new Map();
       for (const r of f) {
-        const k = (hasPort ? r.port : '__ID__') + '|' + r.country;
-        flows.set(k, (flows.get(k)||0) + (+r.value_usd||0));
+        const p = hasPort ? r.port : '__ID__', c = r.country;
+        const add = (kind, value) => {
+          if (!value) return;
+          const k = [kind,p,c].join('|');
+          flows.set(k, (flows.get(k)||0) + value);
+        };
+        if (compare) {
+          add('export', +r.export_value_usd||0);
+          add('import', +r.import_value_usd||0);
+        } else if (isBalance) add('balance', +r.balance_usd||0);
+        else add(selectedFlow, +r.value_usd||0);
       }
-      const items = [...flows.entries()].map(([k, v]) => { const [p, c] = k.split('|'); return {p, c, v}; })
+      const items = [...flows.entries()].map(([k, signed]) => {
+        const [kind,p,c] = k.split('|'); return {kind,p,c,signed,v:Math.abs(signed)};
+      })
         .sort((a, b) => b.v - a.v);
       const shown = items.slice(0, 250);
       const maxv = shown[0] ? shown[0].v : 1;
-      const miss = new Set(), portSum = new Map(), ctrSum = new Map();
-      for (const {p, c, v} of shown) {
+      const miss = new Set(), portSum = new Map(), ctrSum = new Map(), ctrColor = new Map();
+      for (const {kind, p, c, signed, v} of shown) {
         const pp = p === '__ID__' ? GEO.indonesia : GEO.ports[p];
         if (!pp) { miss.add(p); continue; }
         portSum.set(p, (portSum.get(p)||0) + v);
@@ -1114,11 +1343,13 @@
         let clon = cc[1];
         if (clon - pp[1] > 180) clon -= 360;
         if (clon - pp[1] < -180) clon += 360;
+        const col = colorFor(kind, signed);
         L.polyline([[pp[0], pp[1]], [cc[0], clon]],
             {color: col, weight: 1 + 6*Math.sqrt(v/maxv), opacity: .4})
-          .bindTooltip(`${p === '__ID__' ? 'Indonesia' : esc_(p)} &harr; ${esc_(c)}<br>US$ ${Math.round(v).toLocaleString()}`, {sticky: true})
+          .bindTooltip(`${p === '__ID__' ? 'Indonesia' : esc_(p)} &harr; ${esc_(c)}<br>${valueLabel(kind,signed)}`, {sticky: true})
           .addTo(flowLayer);
         ctrSum.set(c, (ctrSum.get(c)||0) + v);
+        if (!ctrColor.has(c)) ctrColor.set(c,col);
       }
       for (const [p, v] of portSum) {
         const pp = p === '__ID__' ? GEO.indonesia : GEO.ports[p];
@@ -1129,13 +1360,13 @@
       for (const [c, v] of ctrSum) {
         const cc = GEO.countries[c];
         if (!cc) continue;
-        L.circleMarker(cc, {radius: 2 + 5*Math.sqrt(v/maxv), color: '#fff', weight: 1, fillColor: col, fillOpacity: .8})
+        L.circleMarker(cc, {radius: 2 + 5*Math.sqrt(v/maxv), color: '#fff', weight: 1, fillColor: ctrColor.get(c) || '#60708b', fillOpacity: .8})
           .bindTooltip(`${esc_(c)}<br>US$ ${Math.round(v).toLocaleString()}`).addTo(flowLayer);
       }
       el('mapnote').textContent =
         `${mapYearIdx ? mapYears[mapYearIdx-1] : 'all years'}: ` +
         `${shown.length}${items.length > shown.length ? ' of ' + items.length.toLocaleString() : ''} flows shown (largest first); ` +
-        `line width and marker size scale with value` +
+        `line width and marker size scale with ${isBalance && !compare ? 'absolute balance' : 'trade value'}` +
         (miss.size ? ` - no coordinates for: ${[...miss].slice(0, 6).join(', ')}${miss.size > 6 ? ' …' : ''}` : '');
     }
 
@@ -1154,8 +1385,9 @@
       URL.revokeObjectURL(a.href);
     }
 
-    // Local visual-QA state. It is only enabled with ?demo=1 and never affects normal use.
-    if (new URLSearchParams(location.search).get('demo') === '1') {
+    // Local visual-QA state. It is only enabled with ?demo=1 or ?demo=balance and never affects normal use.
+    const demoMode = new URLSearchParams(location.search).get('demo');
+    if (demoMode === '1' || demoMode === 'balance') {
       window.addEventListener('load', async () => {
         await loadDropdowns();
         const countries = ['CHINA', 'JAPAN', 'UNITED STATES', 'KOREA, REPUBLIC OF', 'NETHERLANDS'];
@@ -1167,19 +1399,29 @@
           ['44', 'Wood and articles of wood'],
           ['85', 'Electrical machinery and equipment']
         ];
+        const balanceDemo = demoMode === 'balance';
+        const demoFlows = balanceDemo ? ['export','import'] : ['export'];
         rows = [];
         for (const year of [2023, 2024]) for (let month = 1; month <= 12; month++) {
-          countries.forEach((country, index) => rows.push({
-            flow: 'export', year, month_id: String(month).padStart(2, '0'), month: CFG.months[month - 1],
+          countries.forEach((country, index) => demoFlows.forEach(flow => rows.push({
+            flow, year, month_id: String(month).padStart(2, '0'), month: CFG.months[month - 1],
             hs_code: commodities[index][0], hs_desc: commodities[index][1], port: ports[index], country,
-            value_usd: (14 - index * 1.7) * 10000000 + month * 1250000 + (year - 2023) * 9500000,
-            netweight_kg: (22 - index * 2.1) * 10000000 + month * 850000
-          }));
+            value_usd: flow === 'export'
+              ? (14 - index * 1.7) * 10000000 + month * 1250000 + (year - 2023) * 9500000
+              : (7 + index * 2.2) * 10000000 + month * 920000 + (year - 2023) * 7200000,
+            netweight_kg: flow === 'export'
+              ? (22 - index * 2.1) * 10000000 + month * 850000
+              : (12 + index * 2.4) * 10000000 + month * 640000
+          })));
         }
+        selectedFlow = balanceDemo ? 'balance' : 'export';
+        document.querySelector(`input[name=flow][value=${selectedFlow}]`).checked = true;
+        if (balanceDemo) rows = combineBalanceRows(rows);
         buildFilters();
         el('results').style.display = el('vizcard').style.display = el('mapcard').style.display = el('tablecard').style.display = '';
         el('summary-period').textContent = '2023–2024 · monthly';
         el('summary-commodity').textContent = 'HS 03, 15, 27, 44, 85';
+        el('summary-flow').textContent = flowLabel(selectedFlow);
         showResultsLayout();
         render();
       });
